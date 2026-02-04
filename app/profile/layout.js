@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import StaggeredMenu from "@/components/StaggeredMenu";
 
 export default function ProfileLayout({ children }) {
   const [menuBtnColor, setMenuBtnColor] = useState('#000000');
+  const { data: session } = useSession();
 
   useEffect(() => {
     const updateColor = () => {
@@ -40,8 +42,9 @@ export default function ProfileLayout({ children }) {
               { label: "Home", link: "/", ariaLabel: "Go to Home" },
               { label: "Dashboard", link: "/dashboard", ariaLabel: "View Dashboard" },
               { label: "Workflows", link: "/workflows", ariaLabel: "Script Workflows" },
-              { label: "Features", link: "/#features", ariaLabel: "View Features" },
-              { label: "Login", link: "/login", ariaLabel: "Login to your account" },
+              session
+                ? { label: "Profile", link: "/profile", ariaLabel: "View your profile" }
+                : { label: "Login", link: "/login", ariaLabel: "Login to your account" },
             ]}
           />
         </div>

@@ -6,9 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Sparkles, Upload, FileText, Image, Video, Music, X, 
-  Loader2, Coffee, Clapperboard, Shirt, Lightbulb
+  Sparkles, Upload, FileText, Image, Video, Music, X,
+  Loader2, Clapperboard, CheckCircle2, AlertCircle, FileType, Eye, EyeOff
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -33,6 +34,8 @@ const EXAMPLE_WORKFLOWS = [
   }
 ];
 
+const DOCUMENT_EXTENSIONS = ['.pdf', '.docx', '.txt', '.md', '.rtf', '.csv', '.json'];
+
 export default function CreateWorkflowPage() {
   const router = useRouter();
   const fileInputRef = useRef(null);
@@ -40,6 +43,8 @@ export default function CreateWorkflowPage() {
   const [inputs, setInputs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [charCount, setCharCount] = useState(0);
+  const [extractingFiles, setExtractingFiles] = useState({});
+  const [expandedPreviews, setExpandedPreviews] = useState({});
 
   const handleBriefChange = (e) => {
     const value = e.target.value;
@@ -47,33 +52,128 @@ export default function CreateWorkflowPage() {
     setCharCount(value.length);
   };
 
+  const isDocumentFile = (fileName) => {
+    const lowerName = fileName.toLowerCase();
+    return DOCUMENT_EXTENSIONS.some(ext => lowerName.endsWith(ext));
+  };
+
+  const extractTextFromFile = async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/api/extract-text', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        return {
+          text: data.text,
+          wordCount: data.wordCount,
+          charCount: data.charCount,
+          fileType: data.fileType
+        };
+      } else {
+        throw new Error(data.error || 'Failed to extract text');
+      }
+    } catch (error) {
+      console.error('Text extraction error:', error);
+      throw error;
+    }
+  };
+
   const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files);
-    
-    for (const file of files) {
-      const reader = new FileReader();
-      
-      reader.onload = async (event) => {
-        const base64Data = event.target.result.split(',')[1];
-        
-        let fileType = 'document';
-        if (file.type.startsWith('image/')) fileType = 'image';
-        else if (file.type.startsWith('video/')) fileType = 'video';
-        else if (file.type.startsWith('audio/')) fileType = 'audio';
 
-        const newInput = {
-          id: Date.now() + Math.random(),
+    for (const file of files) {
+      const fileId = Date.now() + Math.random();
+      const fileName = file.name;
+      const isDocument = isDocumentFile(fileName);
+
+      // Determine file type
+      let fileType = 'document';
+      if (file.type.startsWith('image/')) fileType = 'image';
+      else if (file.type.startsWith('video/')) fileType = 'video';
+      else if (file.type.startsWith('audio/')) fileType = 'audio';
+
+      // For documents, extract text
+      if (isDocument) {
+        setExtractingFiles(prev => ({ ...prev, [fileId]: true }));
+
+        // Add placeholder while extracting
+        const placeholderInput = {
+          id: fileId,
           type: fileType,
           fileName: file.name,
           mimeType: file.type,
-          base64Data
+          extracting: true,
+          extractedText: null,
+          wordCount: 0,
+          charCount: 0
+        };
+        setInputs(prev => [...prev, placeholderInput]);
+
+        try {
+          const extracted = await extractTextFromFile(file);
+
+          // Update with extracted text
+          setInputs(prev => prev.map(input =>
+            input.id === fileId
+              ? {
+                  ...input,
+                  extracting: false,
+                  extractedText: extracted.text,
+                  wordCount: extracted.wordCount,
+                  charCount: extracted.charCount,
+                  extractedFileType: extracted.fileType
+                }
+              : input
+          ));
+
+          toast.success(`Extracted ${extracted.wordCount.toLocaleString()} words from ${file.name}`);
+        } catch (error) {
+          // Update with error state
+          setInputs(prev => prev.map(input =>
+            input.id === fileId
+              ? {
+                  ...input,
+                  extracting: false,
+                  error: error.message || 'Failed to extract text'
+                }
+              : input
+          ));
+          toast.error(`Failed to extract text from ${file.name}`);
+        } finally {
+          setExtractingFiles(prev => {
+            const updated = { ...prev };
+            delete updated[fileId];
+            return updated;
+          });
+        }
+      } else {
+        // For non-documents (images, videos, audio), just store as base64
+        const reader = new FileReader();
+
+        reader.onload = async (event) => {
+          const base64Data = event.target.result.split(',')[1];
+
+          const newInput = {
+            id: fileId,
+            type: fileType,
+            fileName: file.name,
+            mimeType: file.type,
+            base64Data
+          };
+
+          setInputs(prev => [...prev, newInput]);
+          toast.success(`${file.name} uploaded`);
         };
 
-        setInputs(prev => [...prev, newInput]);
-        toast.success(`${file.name} uploaded`);
-      };
-
-      reader.readAsDataURL(file);
+        reader.readAsDataURL(file);
+      }
     }
 
     e.target.value = '';
@@ -81,6 +181,25 @@ export default function CreateWorkflowPage() {
 
   const removeInput = (id) => {
     setInputs(prev => prev.filter(input => input.id !== id));
+    setExpandedPreviews(prev => {
+      const updated = { ...prev };
+      delete updated[id];
+      return updated;
+    });
+  };
+
+  const togglePreview = (id) => {
+    setExpandedPreviews(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  const appendTextToBrief = (text) => {
+    const newBrief = brief ? `${brief}\n\n---\n\n${text}` : text;
+    setBrief(newBrief);
+    setCharCount(newBrief.length);
+    toast.success('Text appended to brief');
   };
 
   const handleExampleClick = (example) => {
@@ -94,8 +213,21 @@ export default function CreateWorkflowPage() {
       return;
     }
 
+    // Check if any files are still extracting
+    if (Object.keys(extractingFiles).length > 0) {
+      toast.error('Please wait for file extraction to complete');
+      return;
+    }
+
     setLoading(true);
     try {
+      // Prepare inputs with extracted text included
+      const processedInputs = inputs.map(input => ({
+        ...input,
+        // Include extracted text in the input for the API
+        content: input.extractedText || input.base64Data
+      }));
+
       const response = await fetch('/api/scriptforge/workflows/generate', {
         method: 'POST',
         headers: {
@@ -103,7 +235,7 @@ export default function CreateWorkflowPage() {
         },
         body: JSON.stringify({
           brief,
-          inputs
+          inputs: processedInputs
         })
       });
 
@@ -122,13 +254,21 @@ export default function CreateWorkflowPage() {
     }
   };
 
-  const getFileIcon = (type) => {
-    switch (type) {
+  const getFileIcon = (input) => {
+    if (input.extracting) return <Loader2 className="w-4 h-4 animate-spin" />;
+    if (input.error) return <AlertCircle className="w-4 h-4 text-red-400" />;
+    if (input.extractedText) return <CheckCircle2 className="w-4 h-4 text-emerald-400" />;
+
+    switch (input.type) {
       case 'image': return <Image className="w-4 h-4" />;
       case 'video': return <Video className="w-4 h-4" />;
       case 'audio': return <Music className="w-4 h-4" />;
       default: return <FileText className="w-4 h-4" />;
     }
+  };
+
+  const getFileExtension = (fileName) => {
+    return fileName.split('.').pop()?.toUpperCase() || 'FILE';
   };
 
   return (
@@ -161,10 +301,10 @@ export default function CreateWorkflowPage() {
                 {/* Brief Textarea */}
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <label className="text-sm font-medium text-gray-300">
+                    <label className="text-sm font-medium text-slate-700 dark:text-gray-300">
                       Script Brief
                     </label>
-                    <span className="text-xs text-gray-500">{charCount} characters</span>
+                    <span className="text-xs text-slate-500 dark:text-gray-500">{charCount.toLocaleString()} characters</span>
                   </div>
                   <Textarea
                     value={brief}
@@ -172,7 +312,7 @@ export default function CreateWorkflowPage() {
                     placeholder="Create a comprehensive script workflow for developing a sci-fi mystery series. I need help with character development, timeline management, continuity checking, and generating promotional content..."
                     className="min-h-[200px] max-h-[500px] resize-y bg-white/50 dark:bg-slate-800/50 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:border-emerald-500 focus:ring-emerald-500"
                   />
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="text-xs text-slate-500 dark:text-gray-500 mt-2">
                     Include: genre, characters, plot elements, goals, target audience, and any specific requirements
                   </p>
                 </div>
@@ -180,64 +320,171 @@ export default function CreateWorkflowPage() {
                 {/* File Uploads */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <label className="text-sm font-medium text-gray-300">
-                      Attach Files (Optional)
-                    </label>
+                    <div>
+                      <label className="text-sm font-medium text-slate-700 dark:text-gray-300">
+                        Upload Documents
+                      </label>
+                      <p className="text-xs text-slate-500 dark:text-gray-500 mt-0.5">
+                        PDF, Word, Text, Markdown, RTF supported
+                      </p>
+                    </div>
                     <Button
                       onClick={() => fileInputRef.current?.click()}
                       variant="outline"
                       size="sm"
-                      className="border-gray-700 text-gray-300 hover:bg-gray-800"
+                      className="border-slate-300 dark:border-gray-700 text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-800"
                     >
                       <Upload className="w-4 h-4 mr-2" />
-                      Upload
+                      Upload Files
                     </Button>
                   </div>
-                  
+
                   <input
                     ref={fileInputRef}
                     type="file"
                     multiple
-                    accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
+                    accept=".pdf,.doc,.docx,.txt,.md,.rtf,.csv,.json,image/*,video/*,audio/*"
                     onChange={handleFileUpload}
                     className="hidden"
                   />
 
+                  {/* Drag and Drop Zone */}
+                  <div
+                    className="border-2 border-dashed border-slate-300 dark:border-gray-700 rounded-lg p-6 text-center hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors cursor-pointer mb-4"
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.add('border-emerald-500', 'bg-emerald-500/5');
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.remove('border-emerald-500', 'bg-emerald-500/5');
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.remove('border-emerald-500', 'bg-emerald-500/5');
+                      const files = e.dataTransfer.files;
+                      if (files.length > 0) {
+                        const event = { target: { files, value: '' } };
+                        handleFileUpload(event);
+                      }
+                    }}
+                  >
+                    <FileType className="w-8 h-8 mx-auto text-slate-400 dark:text-gray-500 mb-2" />
+                    <p className="text-sm text-slate-600 dark:text-gray-400">
+                      Drag & drop files here or click to browse
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-gray-500 mt-1">
+                      Text will be automatically extracted from documents
+                    </p>
+                  </div>
+
+                  {/* Uploaded Files List */}
                   {inputs.length > 0 && (
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-2">
                       {inputs.map((input) => (
                         <div
                           key={input.id}
-                          className="flex items-center gap-2 p-3 bg-gray-800/50 border border-gray-700 rounded-lg"
+                          className="bg-slate-100/80 dark:bg-gray-800/50 border border-slate-200 dark:border-gray-700 rounded-lg overflow-hidden"
                         >
-                          {getFileIcon(input.type)}
-                          <span className="text-sm text-gray-300 flex-1 truncate">
-                            {input.fileName}
-                          </span>
-                          <button
-                            onClick={() => removeInput(input.id)}
-                            className="text-gray-500 hover:text-red-400"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
+                          {/* File Header */}
+                          <div className="flex items-center gap-3 p-3">
+                            <div className={`p-2 rounded-lg ${
+                              input.error
+                                ? 'bg-red-500/10'
+                                : input.extractedText
+                                  ? 'bg-emerald-500/10'
+                                  : 'bg-slate-200 dark:bg-gray-700'
+                            }`}>
+                              {getFileIcon(input)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-slate-800 dark:text-gray-200 truncate">
+                                {input.fileName}
+                              </p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <Badge variant="outline" className="text-xs px-1.5 py-0">
+                                  {getFileExtension(input.fileName)}
+                                </Badge>
+                                {input.extracting && (
+                                  <span className="text-xs text-amber-500">Extracting text...</span>
+                                )}
+                                {input.extractedText && (
+                                  <span className="text-xs text-emerald-500">
+                                    {input.wordCount.toLocaleString()} words extracted
+                                  </span>
+                                )}
+                                {input.error && (
+                                  <span className="text-xs text-red-400">{input.error}</span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {input.extractedText && (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => togglePreview(input.id)}
+                                    className="h-8 px-2 text-slate-500 hover:text-slate-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                  >
+                                    {expandedPreviews[input.id] ? (
+                                      <EyeOff className="w-4 h-4" />
+                                    ) : (
+                                      <Eye className="w-4 h-4" />
+                                    )}
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => appendTextToBrief(input.extractedText)}
+                                    className="h-8 px-2 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-500/10"
+                                  >
+                                    <span className="text-xs">Add to Brief</span>
+                                  </Button>
+                                </>
+                              )}
+                              <button
+                                onClick={() => removeInput(input.id)}
+                                className="p-1.5 text-slate-400 hover:text-red-400 dark:text-gray-500 dark:hover:text-red-400 transition-colors"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Extracted Text Preview */}
+                          {input.extractedText && expandedPreviews[input.id] && (
+                            <div className="border-t border-slate-200 dark:border-gray-700">
+                              <ScrollArea className="h-40">
+                                <pre className="p-3 text-xs text-slate-600 dark:text-gray-400 whitespace-pre-wrap font-mono">
+                                  {input.extractedText.slice(0, 2000)}
+                                  {input.extractedText.length > 2000 && '...'}
+                                </pre>
+                              </ScrollArea>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
 
-
-
                 {/* Generate Button */}
                 <Button
                   onClick={handleGenerateWorkflow}
-                  disabled={loading || !brief.trim()}
+                  disabled={loading || !brief.trim() || Object.keys(extractingFiles).length > 0}
                   className="w-full h-14 bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 hover:bg-emerald-600 text-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? (
                     <>
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                       Generating Workflow...
+                    </>
+                  ) : Object.keys(extractingFiles).length > 0 ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Extracting Text...
                     </>
                   ) : (
                     <>

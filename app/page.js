@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import StaggeredMenu from "@/components/StaggeredMenu";
 import ModelViewer from "@/components/ModelViewer";
 import LaserFlow from "@/components/LaserFlow";
@@ -19,6 +20,7 @@ export default function Home() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modelKey, setModelKey] = useState(Date.now());
   const pathname = usePathname();
+  const { data: session } = useSession();
 
   useEffect(() => {
     // Set initial color
@@ -65,8 +67,9 @@ export default function Home() {
               { label: "Home", link: "/", ariaLabel: "Go to Home" },
               { label: "Dashboard", link: "/dashboard", ariaLabel: "View Dashboard" },
               { label: "Workflows", link: "/workflows", ariaLabel: "Script Workflows" },
-              { label: "Features", link: "/#features", ariaLabel: "View Features" },
-              { label: "Login", link: "/login", ariaLabel: "Login to your account" },
+              session
+                ? { label: "Profile", link: "/profile", ariaLabel: "View your profile" }
+                : { label: "Login", link: "/login", ariaLabel: "Login to your account" },
             ]}
             socialItems={[
               { label: "LinkedIn", link: "https://linkedin.com" },
@@ -93,9 +96,7 @@ export default function Home() {
                 <div className="text-xs text-slate-500 dark:text-slate-400">Smart Script Writing Assistant</div>
               </div>
             </div>
-            <span className="mb-3 sm:mb-4 inline-flex items-center rounded-full border border-emerald-500/20 bg-emerald-500/20 backdrop-blur-sm px-2.5 sm:px-3 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300 dark:bg-emerald-500/10">
-              AI-Powered Intelligent Script Writing Assistant
-            </span>
+
             <h1 className="mb-3 sm:mb-4 text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white lg:text-5xl xl:text-6xl">
               Write scripts with
               <span className="ml-2 bg-linear-to-r from-emerald-500 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
@@ -151,9 +152,6 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           {/* Section Header */}
           <div className="text-center mb-12 sm:mb-16">
-            <Badge className="mb-4 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20">
-              Intelligent Writing Platform
-            </Badge>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4">
               Everything you need for
               <span className="block mt-2 bg-linear-to-r from-emerald-500 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
@@ -171,10 +169,7 @@ export default function Home() {
               {/* Left: Text Content */}
               <div className="relative z-10 p-6 sm:p-8 lg:p-10 flex items-start md:items-center">
                 <div className="max-w-xl">
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/20 backdrop-blur-sm border border-emerald-500/30 mb-4">
-                    <Sparkles className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
-                    <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">AI-Powered Analytics</span>
-                  </div>
+
                   <h3 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-3">
                     Contextual Story Engine
                   </h3>

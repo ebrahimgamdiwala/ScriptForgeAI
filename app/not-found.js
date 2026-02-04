@@ -50,7 +50,6 @@ export default function NotFound() {
               { label: "Home", link: "/", ariaLabel: "Go to Home" },
               { label: "Dashboard", link: "/dashboard", ariaLabel: "View Dashboard" },
               { label: "Workflows", link: "/workflows", ariaLabel: "Script Workflows" },
-              { label: "Features", link: "/#features", ariaLabel: "View Features" },
               { label: "Login", link: "/login", ariaLabel: "Login to your account" },
             ]}
             socialItems={[

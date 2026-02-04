@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import StaggeredMenu from "@/components/StaggeredMenu";
 
 export default function WorkflowsLayout({ children }) {
   const [menuBtnColor, setMenuBtnColor] = useState('#000000');
   const pathname = usePathname();
+  const { data: session } = useSession();
   
   // Check if we're on a workflow canvas page (e.g., /workflows/abc123)
   // Don't show navbar on individual workflow pages, but exclude /workflows/create
@@ -53,8 +55,9 @@ export default function WorkflowsLayout({ children }) {
               { label: "Home", link: "/", ariaLabel: "Go to Home" },
               { label: "Dashboard", link: "/dashboard", ariaLabel: "View Dashboard" },
               { label: "Workflows", link: "/workflows", ariaLabel: "Script Workflows" },
-              { label: "Features", link: "/#features", ariaLabel: "View Features" },
-              { label: "Login", link: "/login", ariaLabel: "Login to your account" },
+              session
+                ? { label: "Profile", link: "/profile", ariaLabel: "View your profile" }
+                : { label: "Login", link: "/login", ariaLabel: "Login to your account" },
             ]}
           />
         </div>
