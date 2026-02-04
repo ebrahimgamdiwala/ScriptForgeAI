@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 export default function Home() {
-  const modelUrl = "/models/data_chart_graphic_table_infographic.glb";
+  const modelUrl = "/models/paladins_book.glb";
   const [menuBtnColor, setMenuBtnColor] = useState('#000000');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [modelKey, setModelKey] = useState(Date.now());
@@ -123,45 +123,22 @@ export default function Home() {
 
           {/* Right: 3D Model */}
           <div className="order-1 md:order-2 w-full relative">
-            {/* Floating Capsule 1 - Top Right */}
-            <div className="absolute -top-4 -right-4 sm:top-8 sm:right-8 z-20 animate-float">
-              <div className="flex items-center gap-3 bg-linear-to-r from-emerald-500/90 to-teal-500/90 backdrop-blur-md rounded-full px-4 py-3 shadow-xl border border-emerald-400/30">
-                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                  <Brain className="h-5 w-5 text-white" />
-                </div>
-                <div className="text-left">
-                  <p className="text-white font-semibold text-sm ivy-font">Story Intelligence</p>
-                  <p className="text-white/80 text-xs ivy-font">247 Entities Tracked</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Floating Capsule 2 - Bottom Left */}
-            <div className="absolute -bottom-4 -left-4 sm:bottom-12 sm:left-4 z-20 animate-float-delayed">
-              <div className="flex items-center gap-3 bg-linear-to-r from-blue-500/90 to-cyan-500/90 backdrop-blur-md rounded-full px-4 py-3 shadow-xl border border-blue-400/30">
-                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                  <Sparkles className="h-5 w-5 text-white" />
-                </div>
-                <div className="text-left">
-                  <p className="text-white font-semibold text-sm ivy-font">Continuity Check</p>
-                  <p className="text-white/80 text-xs ivy-font">100% Consistency</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200/60 bg-white/80 p-2 sm:p-3 shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/80">
+            <div className="rounded-2xl shadow-lg overflow-hidden">
               <div className="w-full aspect-square max-w-[570px] mx-auto">
                 <ModelViewer
                   key={modelKey}
                   url={modelUrl}
                   defaultRotationX={10}
-                  minZoomDistance={1.5}
-                  maxZoomDistance={4.5}
+                  defaultZoom={1.0}
+                  minZoomDistance={0.3}
+                  maxZoomDistance={3.5}
                   enableManualZoom={true}
                   environmentPreset="city"
                   enableMouseParallax={true}
                   showScreenshotButton={false}
                   enableManualRotation={true}
+                  autoRotate={true}
+                  autoRotateSpeed={0.5}
                 />
               </div>
             </div>
@@ -190,33 +167,40 @@ export default function Home() {
 
           {/* LaserFlow Background Feature */}
           <div className="relative rounded-3xl overflow-hidden border border-border/40 bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 backdrop-blur-sm mb-12 shadow-xl">
-            <div className="absolute inset-0 z-0 opacity-80 dark:opacity-100">
-              <LaserFlow
-                className="w-full h-full"
-                color={isDarkMode ? "#10b981" : "#059669"}
-                wispDensity={1.2}
-                flowSpeed={0.4}
-                fogIntensity={isDarkMode ? 0.35 : 0.25}
-                wispSpeed={12}
-                verticalSizing={2.5}
-                horizontalSizing={0.6}
-              />
-            </div>
-            <div className="relative z-10 p-8 sm:p-12 lg:p-16">
-              <div className="max-w-xl">
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/20 backdrop-blur-sm border border-emerald-500/30 mb-6">
-                  <Sparkles className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
-                  <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">AI-Powered Analytics</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+              {/* Left: Text Content */}
+              <div className="relative z-10 p-6 sm:p-8 lg:p-10 flex items-start md:items-center">
+                <div className="max-w-xl">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/20 backdrop-blur-sm border border-emerald-500/30 mb-4">
+                    <Sparkles className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
+                    <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">AI-Powered Analytics</span>
+                  </div>
+                  <h3 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-3">
+                    Contextual Story Engine
+                  </h3>
+                  <p className="text-lg text-slate-700 dark:text-slate-200 mb-5">
+                    Maintains deep context awareness across your entire manuscript, automatically tracking characters, locations, events, and relationships as you write. Never lose track of story details again.
+                  </p>
+                  <button className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-semibold transition-all hover:scale-105 shadow-lg">
+                    Start Writing
+                  </button>
                 </div>
-                <h3 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-4">
-                  Contextual Story Engine
-                </h3>
-                <p className="text-lg text-slate-700 dark:text-slate-200 mb-6">
-                  Maintains deep context awareness across your entire manuscript, automatically tracking characters, locations, events, and relationships as you write. Never lose track of story details again.
-                </p>
-                <button className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-semibold transition-all hover:scale-105 shadow-lg">
-                  Start Writing
-                </button>
+              </div>
+
+              {/* Right: LaserFlow Animation */}
+              <div className="relative min-h-[400px] md:min-h-[450px]">
+                <div className="absolute inset-0 opacity-80 dark:opacity-100">
+                  <LaserFlow
+                    className="w-full h-full"
+                    color={isDarkMode ? "#10b981" : "#059669"}
+                    wispDensity={1.2}
+                    flowSpeed={0.4}
+                    fogIntensity={isDarkMode ? 0.35 : 0.25}
+                    wispSpeed={12}
+                    verticalSizing={2.2}
+                    horizontalSizing={0.6}
+                  />
+                </div>
               </div>
             </div>
           </div>
