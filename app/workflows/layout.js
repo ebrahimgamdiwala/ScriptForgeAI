@@ -9,8 +9,8 @@ export default function WorkflowsLayout({ children }) {
   const pathname = usePathname();
   
   // Check if we're on a workflow canvas page (e.g., /workflows/abc123)
-  // Don't show navbar on individual workflow pages
-  const isWorkflowCanvasPage = /^\/workflows\/[^\/]+$/.test(pathname);
+  // Don't show navbar on individual workflow pages, but exclude /workflows/create
+  const isWorkflowCanvasPage = /^\/workflows\/[^\/]+$/.test(pathname) && pathname !== '/workflows/create';
 
   useEffect(() => {
     // Set initial color
@@ -54,7 +54,6 @@ export default function WorkflowsLayout({ children }) {
               { label: "Dashboard", link: "/dashboard", ariaLabel: "View Dashboard" },
               { label: "Workflows", link: "/workflows", ariaLabel: "Script Workflows" },
               { label: "Campaign AI", link: "/campaign", ariaLabel: "AI Campaign Generator" },
-              { label: "Assistant", link: "/assistant", ariaLabel: "AI Assistant" },
               { label: "Profile", link: "/profile", ariaLabel: "View Profile" },
             ]}
           />

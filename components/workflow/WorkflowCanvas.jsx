@@ -24,8 +24,8 @@ import AgentNode from './AgentNode';
 import AgentDetailModal from './AgentDetailModal';
 import AgentIcon from './AgentIcon';
 import { AGENT_DEFINITIONS } from '@/lib/agents/definitions';
-import { 
-  ChevronLeft, ChevronRight, ChevronDown, Play, Save, Settings,
+import {
+  ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Play, Save, Settings,
   Loader2, CheckCircle, XCircle, Sparkles, X, Home, Brain, Download, Upload
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -82,6 +82,7 @@ export default function WorkflowCanvas({
   const [selectedEdge, setSelectedEdge] = useState(null);
   const [showStrategy, setShowStrategy] = useState(true);
   const [showModules, setShowModules] = useState(true);
+  const [isStrategyExpanded, setIsStrategyExpanded] = useState(true);
   const [isExecuting, setIsExecuting] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailAgent, setDetailAgent] = useState(null);
@@ -604,23 +605,41 @@ export default function WorkflowCanvas({
                 <div className="pb-4">
                   <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-emerald-500" />
-                        Strategic Approach
-                      </CardTitle>
+                      <div
+                        className="flex items-center justify-between cursor-pointer"
+                        onClick={() => setIsStrategyExpanded(!isStrategyExpanded)}
+                      >
+                        <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-emerald-500" />
+                          Strategic Approach
+                        </CardTitle>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                        >
+                          {isStrategyExpanded ? (
+                            <ChevronUp className="w-4 h-4" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
                     </CardHeader>
-                    <CardContent>
-                      {isGeneratingStrategy ? (
-                        <div className="flex items-center gap-2 text-emerald-500">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span className="text-xs">Generating strategy...</span>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                          {generatedStrategy || workflow?.description || 'This workflow orchestrates multiple AI agents to achieve your goals.'}
-                        </p>
-                      )}
-                    </CardContent>
+                    {isStrategyExpanded && (
+                      <CardContent>
+                        {isGeneratingStrategy ? (
+                          <div className="flex items-center gap-2 text-emerald-500">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span className="text-xs">Generating strategy...</span>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                            {generatedStrategy || workflow?.description || 'This workflow orchestrates multiple AI agents to achieve your goals.'}
+                          </p>
+                        )}
+                      </CardContent>
+                    )}
                   </Card>
                 </div>
               </div>
