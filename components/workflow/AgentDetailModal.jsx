@@ -22,7 +22,10 @@ export default function AgentDetailModal({ agent, isOpen, onClose, onRunAgent })
   const isStoryIntelligenceAgent = agent.data?.agentType === 'story-intelligence' || agent.data?.type === 'story-intelligence';
 
   const handleOpenKnowledgeGraph = () => {
-    router.push('/story-graph');
+    const url = agent.data?.workflowId 
+      ? `/story-graph?workflowId=${agent.data.workflowId}`
+      : '/story-graph';
+    router.push(url);
   };
 
   const handleCopy = async (text, type) => {
@@ -75,11 +78,27 @@ export default function AgentDetailModal({ agent, isOpen, onClose, onRunAgent })
     ? (typeof agent.data.input === 'object' ? JSON.stringify(agent.data.input, null, 2) : String(agent.data.input))
     : 'No input available yet';
   
-  const outputText = agent.data.output || agent.data.result
-    ? (typeof (agent.data.output || agent.data.result) === 'object' 
-        ? JSON.stringify(agent.data.output || agent.data.result, null, 2) 
-        : String(agent.data.output || agent.data.result))
-    : 'No output generated yet';
+  // Format output based on agent type for better readability
+  const formatOutput = () => {
+    const result = agent.data.result;
+    const output = agent.data.output;
+    
+    if (!result && !output) return 'No output generated yet';
+    
+    // If there's a formatted string output, show it with markdown-like styling
+    if (typeof output === 'string') {
+      return output;
+    }
+    
+    // Otherwise, pretty print the JSON result
+    if (result && typeof result === 'object') {
+      return JSON.stringify(result, null, 2);
+    }
+    
+    return String(output || result);
+  };
+
+  const outputText = formatOutput();
 
   const promptText = agent.data.prompt || agent.data.promptContext || 'Prompt will be generated during execution';
 
@@ -118,12 +137,12 @@ export default function AgentDetailModal({ agent, isOpen, onClose, onRunAgent })
               </div>
             </div>
             
-            {agent.data.status !== 'running' && (
+            {(agent.data.status !== 'running') ? (
               <div className="flex flex-col gap-2">
                 {isKnowledgeGraphAgent && (
                   <Button
                     onClick={handleOpenKnowledgeGraph}
-                    className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg"
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg"
                   >
                     <Network className="w-4 h-4 mr-2" />
                     Open 3D Graph
@@ -138,32 +157,79 @@ export default function AgentDetailModal({ agent, isOpen, onClose, onRunAgent })
                   Run Agent
                 </Button>
               </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <Button
+                  disabled
+                  className="bg-amber-500/80 text-white shadow-lg cursor-not-allowed"
+                >
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Running...
+                </Button>
+              </div>
             )}
           </div>
         </DialogHeader>
 
         <Separator className="my-4" />
 
-        <Tabs defaultValue="prompt" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="prompt">Input Prompt</TabsTrigger>
-            <TabsTrigger value="input">Input Data</TabsTrigger>
-            <TabsTrigger value="output">Output Result</TabsTrigger>
+        <Tabs defaultValue="output" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="output">Output</TabsTrigger>
+            <TabsTrigger value="result">Full Result</TabsTrigger>
+            <TabsTrigger value="input">Input</TabsTrigger>
+            <TabsTrigger value="prompt">Prompt</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="prompt" className="mt-4">
+          <TabsContent value="output" className="mt-4">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                  Input Prompt
+                  Agent Output Summary
                 </h3>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleCopy(promptText, 'input')}
+                  onClick={() => handleCopy(outputText, 'output')}
                   className="text-xs"
                 >
-                  {copiedInput ? (
+                  {copiedOutput ? (
+                    <>
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3 h-3 mr-1" />
+                      Copy
+                    </>
+                  )}
+                </Button>
+              </div>
+              <ScrollArea className="h-[400px] w-full rounded-lg border border-border bg-muted/50 p-4">
+                <div className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                  {outputText}
+                </div>
+              </ScrollArea>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="result" className="mt-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                  Full Structured Result (JSON)
+                </h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleCopy(
+                    agent.data.result ? JSON.stringify(agent.data.result, null, 2) : 'No result', 
+                    'output'
+                  )}
+                  className="text-xs"
+                >
+                  {copiedOutput ? (
                     <>
                       <CheckCircle className="w-3 h-3 mr-1" />
                       Copied
@@ -178,7 +244,9 @@ export default function AgentDetailModal({ agent, isOpen, onClose, onRunAgent })
               </div>
               <ScrollArea className="h-[400px] w-full rounded-lg border border-border bg-muted/50 p-4">
                 <pre className="text-xs text-muted-foreground font-mono whitespace-pre-wrap">
-                  {promptText}
+                  {agent.data.result 
+                    ? JSON.stringify(agent.data.result, null, 2)
+                    : 'No structured result available yet. Run the agent to generate output.'}
                 </pre>
               </ScrollArea>
             </div>
@@ -217,19 +285,19 @@ export default function AgentDetailModal({ agent, isOpen, onClose, onRunAgent })
             </div>
           </TabsContent>
 
-          <TabsContent value="output" className="mt-4">
+          <TabsContent value="prompt" className="mt-4">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                  Generated Output
+                  Input Prompt
                 </h3>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleCopy(outputText, 'output')}
+                  onClick={() => handleCopy(promptText, 'input')}
                   className="text-xs"
                 >
-                  {copiedOutput ? (
+                  {copiedInput ? (
                     <>
                       <CheckCircle className="w-3 h-3 mr-1" />
                       Copied
@@ -244,7 +312,7 @@ export default function AgentDetailModal({ agent, isOpen, onClose, onRunAgent })
               </div>
               <ScrollArea className="h-[400px] w-full rounded-lg border border-border bg-muted/50 p-4">
                 <pre className="text-xs text-muted-foreground font-mono whitespace-pre-wrap">
-                  {outputText}
+                  {promptText}
                 </pre>
               </ScrollArea>
             </div>

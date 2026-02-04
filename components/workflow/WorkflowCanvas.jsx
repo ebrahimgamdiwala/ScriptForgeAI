@@ -92,6 +92,26 @@ export default function WorkflowCanvas({
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [expandedAgentId, setExpandedAgentId] = useState(null);
   const [showManuscriptModal, setShowManuscriptModal] = useState(false);
+  const [executingNodeId, setExecutingNodeId] = useState(null);
+
+  // Function to update a single node's status
+  const updateNodeStatus = useCallback((nodeId, status, result = null, error = null) => {
+    setNodes((nds) =>
+      nds.map((node) =>
+        node.id === nodeId
+          ? {
+              ...node,
+              data: {
+                ...node.data,
+                status,
+                result: result || node.data.result,
+                error: error || node.data.error,
+              },
+            }
+          : node
+      )
+    );
+  }, [setNodes]);
 
   // Theme detection
   useEffect(() => {
@@ -111,20 +131,24 @@ export default function WorkflowCanvas({
     return () => observer.disconnect();
   }, []);
 
-  // Auto-layout nodes to prevent overlapping
+  // Auto-layout nodes to prevent overlapping - only run when workflow changes
   useEffect(() => {
-    if (nodes.length > 0 && workflow?.nodes) {
+    if (workflow?.nodes && workflow.nodes.length > 0) {
       const layoutNodes = autoLayoutNodes(workflow.nodes);
-      // Add click handler to all nodes
+      // Add click handler, run handler, and workflow context to all nodes
       const nodesWithHandlers = layoutNodes.map(node => ({
         ...node,
         data: {
           ...node.data,
-          onNodeClick: handleNodeClick
+          onNodeClick: handleNodeClick,
+          onRun: (agentType) => executeAgentById(node.id, agentType),
+          workflowId: workflow._id,
+          status: node.data.status || 'idle',
         }
       }));
       setNodes(nodesWithHandlers);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workflow]);
 
   // Update edges to use smooth bezier curves
@@ -287,6 +311,67 @@ export default function WorkflowCanvas({
     }
   }, [nodes]);
 
+  // Function to execute a single agent
+  const executeAgentById = useCallback(async (nodeId, agentType) => {
+    if (executingNodeId) {
+      toast.error('Another agent is already running');
+      return;
+    }
+
+    setExecutingNodeId(nodeId);
+    updateNodeStatus(nodeId, 'running');
+    toast.loading(`Running ${agentType}...`, { id: `agent-${nodeId}` });
+
+    try {
+      const response = await fetch('/api/scriptforge/workflows/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workflowId: workflow?._id,
+          singleAgentId: nodeId,
+          agentType: agentType,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        updateNodeStatus(nodeId, 'success', data.result);
+        toast.success(`${agentType} completed!`, { id: `agent-${nodeId}` });
+        
+        // Update the node with full result data from server
+        if (data.nodeData) {
+          setNodes((nds) =>
+            nds.map((node) =>
+              node.id === nodeId
+                ? {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      ...data.nodeData,
+                      status: 'success',
+                      onNodeClick: handleNodeClick,
+                      onRun: (type) => executeAgentById(node.id, type),
+                      workflowId: workflow?._id,
+                    },
+                  }
+                : node
+            )
+          );
+        }
+      } else {
+        updateNodeStatus(nodeId, 'error', null, data.error);
+        toast.error(data.error || 'Agent execution failed', { id: `agent-${nodeId}` });
+      }
+    } catch (error) {
+      console.error('Agent execution error:', error);
+      updateNodeStatus(nodeId, 'error', null, error.message);
+      toast.error('Agent execution failed', { id: `agent-${nodeId}` });
+    } finally {
+      setExecutingNodeId(null);
+    }
+  }, [executingNodeId, workflow, updateNodeStatus, handleNodeClick, setNodes]);
+
   const handleRunAgentFromModal = useCallback((agent) => {
     // Trigger agent execution
     if (agent.data?.onRun) {
@@ -325,14 +410,19 @@ export default function WorkflowCanvas({
         data: {
           ...agentData,
           status: 'idle',
-          onNodeClick: handleNodeClick
+          onNodeClick: handleNodeClick,
+          onRun: (agentType) => executeAgentById(`node-${Date.now()}`, agentType),
+          workflowId: workflow?._id
         }
       };
+
+      // Re-assign onRun with the correct node id
+      newNode.data.onRun = (agentType) => executeAgentById(newNode.id, agentType);
 
       setNodes((nds) => nds.concat(newNode));
       onUpdateNodes?.([...nodes, newNode]);
     },
-    [nodes, onUpdateNodes, setNodes]
+    [nodes, onUpdateNodes, setNodes, workflow, handleNodeClick, executeAgentById]
   );
 
   const onConnect = useCallback(
@@ -385,11 +475,40 @@ export default function WorkflowCanvas({
 
   const handleExecute = async () => {
     setIsExecuting(true);
+    
+    // Set all nodes to 'pending' state initially
+    setNodes((nds) =>
+      nds.map((node, index) => ({
+        ...node,
+        data: {
+          ...node.data,
+          status: index === 0 ? 'running' : 'pending',
+        },
+      }))
+    );
+
+    toast.loading('Executing workflow...', { id: 'workflow-execute' });
+
     try {
+      // Execute workflow
       await onExecute?.();
+      
+      // After execution, refresh the workflow to get updated node statuses
+      toast.success('Workflow executed successfully!', { id: 'workflow-execute' });
     } catch (error) {
       console.error('Workflow execution error:', error);
-      toast.error('Workflow execution failed');
+      toast.error('Workflow execution failed', { id: 'workflow-execute' });
+      
+      // Reset all nodes to idle on failure
+      setNodes((nds) =>
+        nds.map((node) => ({
+          ...node,
+          data: {
+            ...node.data,
+            status: 'error',
+          },
+        }))
+      );
     } finally {
       setIsExecuting(false);
     }
@@ -431,12 +550,14 @@ export default function WorkflowCanvas({
         const importedData = JSON.parse(e.target.result);
         
         if (importedData.nodes && importedData.edges) {
-          // Add click handlers to imported nodes
+          // Add click handlers, run handlers, and workflow context to imported nodes
           const nodesWithHandlers = importedData.nodes.map(node => ({
             ...node,
             data: {
               ...node.data,
-              onNodeClick: handleNodeClick
+              onNodeClick: handleNodeClick,
+              onRun: (agentType) => executeAgentById(node.id, agentType),
+              workflowId: workflow?._id
             }
           }));
           

@@ -14,12 +14,16 @@ export default function AgentNode({ data, isConnectable, id }) {
 
   const handleOpenKnowledgeGraph = (e) => {
     e.stopPropagation();
-    router.push('/story-graph');
+    const url = data.workflowId 
+      ? `/story-graph?workflowId=${data.workflowId}`
+      : '/story-graph';
+    router.push(url);
   };
 
   const getStatusColor = () => {
     switch (data.status) {
       case 'running': return 'border-amber-500/50';
+      case 'pending': return 'border-blue-500/50';
       case 'success': return 'border-emerald-500/50';
       case 'error': return 'border-red-500/50';
       default: return 'border-border';
@@ -29,6 +33,7 @@ export default function AgentNode({ data, isConnectable, id }) {
   const getStatusIcon = () => {
     switch (data.status) {
       case 'running': return <Loader2 className="w-3 h-3 animate-spin text-amber-500" />;
+      case 'pending': return <Loader2 className="w-3 h-3 animate-pulse text-blue-500" />;
       case 'success': return <CheckCircle className="w-3 h-3 text-emerald-500" />;
       case 'error': return <XCircle className="w-3 h-3 text-red-500" />;
       default: return null;
@@ -38,10 +43,14 @@ export default function AgentNode({ data, isConnectable, id }) {
   const getStatusBadge = () => {
     switch (data.status) {
       case 'running': return <Badge variant="outline" className="border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px]">Running</Badge>;
+      case 'pending': return <Badge variant="outline" className="border-blue-500/50 bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px]">Waiting</Badge>;
       case 'success': return <Badge variant="outline" className="border-emerald-500/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px]">Complete</Badge>;
+      case 'error': return <Badge variant="outline" className="border-red-500/50 bg-red-500/10 text-red-600 dark:text-red-400 text-[10px]">Error</Badge>;
       default: return <Badge variant="outline" className="border-border bg-muted text-muted-foreground text-[10px]">Ready</Badge>;
     }
   };
+
+  const isRunningOrPending = data.status === 'running' || data.status === 'pending';
 
   return (
     <>
@@ -53,12 +62,12 @@ export default function AgentNode({ data, isConnectable, id }) {
       />
       
       <Card 
-        className={`w-[280px] bg-card/95 backdrop-blur-xl border ${getStatusColor()} hover:border-emerald-500/50 transition-all hover:shadow-xl group relative overflow-hidden cursor-pointer ${data.status === 'running' ? 'animate-glow-pulse' : ''}`}
+        className={`w-[280px] bg-card/95 backdrop-blur-xl border-2 ${getStatusColor()} hover:border-emerald-500/50 transition-all hover:shadow-xl group relative overflow-hidden cursor-pointer ${data.status === 'running' ? 'animate-glow-pulse ring-2 ring-amber-500/30 shadow-lg shadow-amber-500/20' : ''} ${data.status === 'pending' ? 'ring-1 ring-blue-500/20 shadow-md shadow-blue-500/10' : ''}`}
         onClick={() => data.onNodeClick?.(id, data)}
       >
         {/* Glow overlay when running */}
         {data.status === 'running' && (
-          <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 animate-shimmer pointer-events-none" />
+          <div className="absolute inset-0 bg-linear-to-r from-emerald-500/5 via-amber-500/10 to-emerald-500/5 animate-shimmer pointer-events-none" />
         )}
         {/* Colored top border accent */}
         <div 
@@ -119,7 +128,7 @@ export default function AgentNode({ data, isConnectable, id }) {
               <>
                 <Button
                   size="sm"
-                  className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold text-xs h-8 shadow-lg transition-all"
+                  className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs h-8 shadow-lg shadow-emerald-500/20 transition-all"
                   onClick={handleOpenKnowledgeGraph}
                 >
                   <Network className="w-3 h-3 mr-1.5" />
@@ -128,27 +137,41 @@ export default function AgentNode({ data, isConnectable, id }) {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="px-3 h-8 border-border text-muted-foreground hover:text-foreground hover:bg-accent"
+                  className="px-3 h-8 border-border text-muted-foreground hover:text-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={(e) => {
                     e.stopPropagation();
                     data.onRun?.(data.agentType);
                   }}
+                  disabled={isRunningOrPending}
                 >
-                  <Play className="w-3 h-3" />
+                  {isRunningOrPending ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Play className="w-3 h-3" />
+                  )}
                 </Button>
               </>
             ) : (
               <>
                 <Button
                   size="sm"
-                  className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs h-8 shadow-lg shadow-emerald-500/20 transition-all"
+                  className={`flex-1 font-semibold text-xs h-8 shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    isRunningOrPending 
+                      ? 'bg-amber-500 hover:bg-amber-500 text-white shadow-amber-500/20' 
+                      : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/20'
+                  }`}
                   onClick={(e) => {
                     e.stopPropagation();
                     data.onRun?.(data.agentType);
                   }}
+                  disabled={isRunningOrPending}
                 >
-                  <Play className="w-3 h-3 mr-1.5" />
-                  Run
+                  {isRunningOrPending ? (
+                    <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                  ) : (
+                    <Play className="w-3 h-3 mr-1.5" />
+                  )}
+                  {data.status === 'running' ? 'Running...' : data.status === 'pending' ? 'Waiting...' : 'Run'}
                 </Button>
                 <Button
                   size="sm"
@@ -166,16 +189,20 @@ export default function AgentNode({ data, isConnectable, id }) {
           </div>
 
           {/* Output Preview */}
-          {data.result && (
+          {(data.output || data.result) && (
             <div className="mt-3 p-2.5 bg-muted/50 rounded-lg border border-border">
               <div className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 mb-1 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
                 OUTPUT
               </div>
-              <div className="text-[10px] text-muted-foreground line-clamp-2 font-mono">
-                {typeof data.result === 'object' 
-                  ? JSON.stringify(data.result).substring(0, 80) + '...'
-                  : String(data.result).substring(0, 80) + '...'}
+              <div className="text-[10px] text-muted-foreground line-clamp-4 font-mono whitespace-pre-wrap">
+                {data.output 
+                  ? (typeof data.output === 'string' 
+                      ? data.output.substring(0, 150) + (data.output.length > 150 ? '...' : '')
+                      : JSON.stringify(data.output).substring(0, 150) + '...')
+                  : (typeof data.result === 'object' 
+                      ? JSON.stringify(data.result).substring(0, 100) + '...'
+                      : String(data.result).substring(0, 100) + '...')}
               </div>
             </div>
           )}

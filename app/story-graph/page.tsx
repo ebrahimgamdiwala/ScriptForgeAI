@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,7 +30,8 @@ import {
   Eye,
   EyeOff,
   Search,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -73,6 +75,9 @@ interface GraphData {
 }
 
 export default function StoryKnowledgeGraphPage() {
+  const searchParams = useSearchParams();
+  const workflowId = searchParams.get('workflowId');
+  
   const fgRef = useRef<any>(null);
   const [graphData, setGraphData] = useState<GraphData>({ nodes: [], edges: [] });
   const [loading, setLoading] = useState(true);
@@ -85,14 +90,20 @@ export default function StoryKnowledgeGraphPage() {
   const [highlightNodes, setHighlightNodes] = useState<Set<string>>(new Set());
   const [stats, setStats] = useState<Record<string, number>>({});
   const [isGeneratingDemo, setIsGeneratingDemo] = useState(false);
+  const [workflowName, setWorkflowName] = useState<string | null>(null);
 
   // Fetch graph data
   const fetchGraphData = useCallback(async (chapterNumber?: number) => {
     setLoading(true);
     try {
-      const url = chapterNumber 
+      let url = chapterNumber 
         ? `/api/story-graph/chapter/${chapterNumber}`
         : '/api/story-graph/overview';
+      
+      // Add workflowId filter if present
+      if (workflowId) {
+        url += `?workflowId=${workflowId}`;
+      }
       
       const response = await fetch(url);
       const data = await response.json();
@@ -233,6 +244,33 @@ export default function StoryKnowledgeGraphPage() {
     }
   }, []);
 
+  // Clear all graph data
+  const clearGraphData = useCallback(async () => {
+    if (!confirm('Are you sure you want to clear all graph data? This cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/story-graph/clear', {
+        method: 'POST'
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        toast.success('Graph data cleared successfully');
+        setGraphData({ nodes: [], edges: [] });
+        setChapters([]);
+        setStats({});
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error) {
+      console.error('Failed to clear graph:', error);
+      toast.error('Failed to clear graph data');
+    }
+  }, []);
+
   // Custom node rendering
   const getNodeColor = useCallback((node: GraphNode) => {
     if (highlightNodes.size > 0 && !highlightNodes.has(node.id)) {
@@ -267,7 +305,10 @@ export default function StoryKnowledgeGraphPage() {
                 <Network className="w-5 h-5 text-emerald-400" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-foreground">Story Knowledge Graph</h1>
+                <h1 className="text-lg font-bold text-foreground">
+                  Story Knowledge Graph
+                  {workflowId && <span className="text-emerald-400 ml-2 text-sm font-normal">(Current Workflow)</span>}
+                </h1>
                 <p className="text-xs text-muted-foreground">
                   {graphData.nodes.length} nodes • {graphData.edges.length} relationships
                 </p>
@@ -281,7 +322,7 @@ export default function StoryKnowledgeGraphPage() {
               size="default"
               onClick={generateDemoData}
               disabled={isGeneratingDemo}
-              className="bg-linear-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg"
+              className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20"
             >
               {isGeneratingDemo ? (
                 <>
@@ -294,6 +335,15 @@ export default function StoryKnowledgeGraphPage() {
                   Generate Demo Story
                 </>
               )}
+            </Button>
+            <Button
+              variant="outline"
+              size="default"
+              onClick={clearGraphData}
+              className="border-red-500/50 text-red-500 hover:text-red-400 hover:bg-red-500/10"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Clear
             </Button>
             <Button
               variant="outline"
@@ -321,8 +371,8 @@ export default function StoryKnowledgeGraphPage() {
       <div className="pt-16 h-screen flex">
         {/* Left Sidebar - Filters & Legend */}
         {showFilters && (
-          <div className="w-72 bg-card/80 backdrop-blur-xl border-r border-border flex flex-col">
-            <div className="p-4 border-b border-border">
+          <div className="w-72 bg-card/80 backdrop-blur-xl border-r border-border flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+            <div className="p-4 border-b border-border shrink-0">
               <h3 className="text-sm font-semibold text-muted-foreground mb-3">Search</h3>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
@@ -344,7 +394,7 @@ export default function StoryKnowledgeGraphPage() {
               </div>
             </div>
 
-            <div className="p-4 border-b border-border">
+            <div className="p-4 border-b border-border shrink-0">
               <h3 className="text-sm font-semibold text-muted-foreground mb-3">Node Types</h3>
               <div className="space-y-2">
                 {Object.entries(NODE_TYPES).map(([type, config]) => {
@@ -384,9 +434,9 @@ export default function StoryKnowledgeGraphPage() {
               </div>
             </div>
 
-            <div className="p-4 flex-1 overflow-hidden">
-              <h3 className="text-sm font-semibold text-muted-foreground mb-3">Chapters</h3>
-              <ScrollArea className="h-full">
+            <div className="p-4 flex-1 overflow-hidden flex flex-col min-h-0">
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3 shrink-0">Chapters</h3>
+              <ScrollArea className="flex-1 min-h-0">
                 <div className="space-y-2 pr-2">
                   <button
                     onClick={() => handleChapterFilter(null)}
@@ -445,7 +495,7 @@ export default function StoryKnowledgeGraphPage() {
                   size="default"
                   onClick={generateDemoData}
                   disabled={isGeneratingDemo}
-                  className="bg-linear-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20"
                 >
                   {isGeneratingDemo ? (
                     <>
@@ -498,19 +548,19 @@ export default function StoryKnowledgeGraphPage() {
 
           {/* Selected Node Details */}
           {selectedNode && (
-            <Card className="absolute top-4 right-4 w-80 bg-card/95 border-border backdrop-blur-xl shadow-2xl">
-              <CardHeader className="pb-2">
+            <Card className="absolute top-4 right-4 w-80 max-h-[calc(100vh-8rem)] bg-card/95 border-border backdrop-blur-xl shadow-2xl flex flex-col overflow-hidden">
+              <CardHeader className="pb-2 shrink-0">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
                     <div 
-                      className="w-4 h-4 rounded-full" 
+                      className="w-4 h-4 rounded-full shrink-0" 
                       style={{ backgroundColor: NODE_TYPES[selectedNode.type as keyof typeof NODE_TYPES]?.color }}
                     />
-                    <CardTitle className="text-foreground text-lg">{selectedNode.label}</CardTitle>
+                    <CardTitle className="text-foreground text-lg truncate">{selectedNode.label}</CardTitle>
                   </div>
                   <button 
                     onClick={() => setSelectedNode(null)}
-                    className="text-muted-foreground hover:text-foreground"
+                    className="text-muted-foreground hover:text-foreground shrink-0 ml-2"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -527,15 +577,15 @@ export default function StoryKnowledgeGraphPage() {
                   {selectedNode.type}
                 </Badge>
               </CardHeader>
-              <CardContent className="">
-                <ScrollArea className="h-48">
-                  <div className="space-y-3 text-sm">
+              <CardContent className="flex-1 overflow-hidden">
+                <ScrollArea className="h-full max-h-64">
+                  <div className="space-y-3 text-sm pr-3">
                     {Object.entries(selectedNode.properties || {}).map(([key, value]) => {
                       if (key === 'id' || !value) return null;
                       return (
                         <div key={key}>
                           <div className="text-muted-foreground text-xs uppercase mb-1">{key.replace(/_/g, ' ')}</div>
-                          <div className="text-foreground">
+                          <div className="text-foreground break-words">
                             {Array.isArray(value) ? value.join(', ') : String(value)}
                           </div>
                         </div>
