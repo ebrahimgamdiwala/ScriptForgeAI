@@ -12,11 +12,11 @@ export default function Footer() {
             <div className="flex items-center gap-2 mb-4">
               <img
                 src="/chain-forecast.svg"
-                alt="ChainForecast Logo"
+                alt="ScriptForgeAI Logo"
                 className="h-8 w-8 dark:invert"
               />
               <span className="text-xl font-bold text-slate-900 dark:text-white">
-                ChainForecast
+                ScriptForgeAI
               </span>
             </div>
             <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md">

@@ -87,11 +87,11 @@ export default function Home() {
             <div className="mb-4 sm:mb-6 flex items-center gap-3">
               <img
                 src="/chain-forecast.svg"
-                alt="ChainForecast"
+                alt="ScriptForgeAI"
                 className="h-12 sm:h-16 w-auto dark:invert"
               />
               <div className="leading-tight">
-                <div className="text-lg sm:text-2xl font-semibold text-slate-900 dark:text-white">ChainForecast</div>
+                <div className="text-lg sm:text-2xl font-semibold text-slate-900 dark:text-white">ScriptForgeAI</div>
                 <div className="text-xs text-slate-500 dark:text-slate-400">AI Sales Forecasting & CRM</div>
               </div>
             </div>

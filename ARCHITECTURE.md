@@ -1,10 +1,10 @@
-# ChainForecast System Architecture
+# ScriptForgeAI System Architecture
 
 ## 🎯 Core Innovation
 
 **Traditional Approach:** User manually drags and drops nodes to build workflows.
 
-**ChainForecast Approach:** AI analyzes user's KYC data + prompt → autonomously generates workflow graph → user can edit and execute.
+**ScriptForgeAI Approach:** AI analyzes user's KYC data + prompt → autonomously generates workflow graph → user can edit and execute.
 
 ---
 
@@ -572,7 +572,7 @@ lib/
 ```env
 # Production
 MONGODB_URI=mongodb+srv://...
-NEXTAUTH_URL=https://chainforecast.com
+NEXTAUTH_URL=https://ScriptForgeAI.com
 NEXTAUTH_SECRET=<strong-secret>
 GOOGLE_CLIENT_ID=<prod-client-id>
 GOOGLE_CLIENT_SECRET=<prod-secret>
@@ -598,4 +598,4 @@ GEMINI_API_KEY=<api-key>
 
 ---
 
-**This architecture enables ChainForecast to be the first truly AI-native campaign platform! 🚀**
+**This architecture enables ScriptForgeAI to be the first truly AI-native campaign platform! 🚀**

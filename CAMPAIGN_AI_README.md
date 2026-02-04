@@ -313,4 +313,4 @@ The system includes:
 
 ## License
 
-Part of ChainForecast - All rights reserved
+Part of ScriptForgeAI - All rights reserved

@@ -1,4 +1,4 @@
-# ChainForecast Authentication & KYC Setup Guide
+# ScriptForgeAI Authentication & KYC Setup Guide
 
 ## Overview
 This guide will help you set up the authentication system with MongoDB, Google OAuth, and the 16-question KYC onboarding flow.
@@ -47,7 +47,7 @@ mongod --dbpath /path/to/data/directory
 #### Step 1: Create Google Cloud Project
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Click "Select a Project" → "New Project"
-3. Name it "ChainForecast" → Create
+3. Name it "ScriptForgeAI" → Create
 
 #### Step 2: Enable Google+ API
 1. In your project, go to "APIs & Services" → "Library"
@@ -59,13 +59,13 @@ mongod --dbpath /path/to/data/directory
 2. Click "Create Credentials" → "OAuth 2.0 Client ID"
 3. Configure consent screen first if prompted:
    - User Type: External
-   - App name: ChainForecast
+   - App name: ScriptForgeAI
    - User support email: your email
    - Developer contact: your email
    - Save and Continue through remaining steps
 4. Create OAuth Client ID:
    - Application type: Web application
-   - Name: ChainForecast Web Client
+   - Name: ScriptForgeAI Web Client
    - Authorized JavaScript origins:
      - `http://localhost:3000`
      - `https://yourdomain.com` (for production)
@@ -93,7 +93,7 @@ Edit `.env.local` and fill in your credentials:
 
 ```env
 # MongoDB
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/chainforecast
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/ScriptForgeAI
 
 # NextAuth
 NEXTAUTH_URL=http://localhost:3000

@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "ChainForecast - AI-Powered Sales Forecasting & CRM",
+  title: "ScriptForgeAI - AI-Powered Sales Forecasting & CRM",
   description: "Advanced retail analytics platform with AI-driven sales forecasting, customer segmentation, and agentic campaign workflows",
 };
 

@@ -79,7 +79,7 @@ export default function AuthPage() {
           <CardDescription className="text-center text-gray-400">
             {isSignUp 
               ? 'Sign up to start building AI-powered campaigns' 
-              : 'Sign in to continue to ChainForecast'}
+              : 'Sign in to continue to ScriptForgeAI'}
           </CardDescription>
         </CardHeader>
 

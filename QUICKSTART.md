@@ -1,4 +1,4 @@
-# ChainForecast - Quick Start
+# ScriptForgeAI - Quick Start
 
 ## 🚀 What's Been Implemented
 

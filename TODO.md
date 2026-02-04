@@ -1,4 +1,4 @@
-# 🚀 ChainForecast - Next Steps
+# 🚀 ScriptForgeAI - Next Steps
 
 ## ✅ Completed (Current Implementation)
 

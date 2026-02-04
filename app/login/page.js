@@ -204,7 +204,7 @@ export default function LoginPage() {
             <h1 className="text-5xl font-bold text-foreground ivy-font">
               Welcome to
               <span className="block mt-2 bg-linear-to-r from-emerald-500 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
-                ChainForecast
+                ScriptForgeAI
               </span>
             </h1>
             <p className="text-lg text-muted-foreground ivy-font max-w-md">

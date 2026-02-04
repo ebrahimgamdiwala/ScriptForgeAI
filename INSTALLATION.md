@@ -1,4 +1,4 @@
-# 🚀 ChainForecast - Installation & Setup
+# 🚀 ScriptForgeAI - Installation & Setup
 
 ## Prerequisites
 
@@ -14,7 +14,7 @@ Before you begin, ensure you have:
 
 ```bash
 # Navigate to project directory
-cd ChainForecast-Next-App
+cd ScriptForgeAI-Next-App
 
 # Install all required packages
 npm install
@@ -41,7 +41,7 @@ This will install:
    - Select region closest to you
    - Click "Create"
 6. Create database user:
-   - Username: `chainforecast`
+   - Username: `ScriptForgeAI`
    - Password: Generate strong password (save it!)
 7. Add IP Access:
    - Click "Network Access"
@@ -52,11 +52,11 @@ This will install:
    - Choose "Connect your application"
    - Copy the connection string
    - Replace `<password>` with your database password
-   - Replace `<dbname>` with `chainforecast`
+   - Replace `<dbname>` with `ScriptForgeAI`
 
 **Your connection string should look like:**
 ```
-mongodb+srv://chainforecast:YOUR_PASSWORD@cluster0.xxxxx.mongodb.net/chainforecast?retryWrites=true&w=majority
+mongodb+srv://ScriptForgeAI:YOUR_PASSWORD@cluster0.xxxxx.mongodb.net/ScriptForgeAI?retryWrites=true&w=majority
 ```
 
 ### Option B: Local MongoDB
@@ -99,7 +99,7 @@ sudo systemctl start mongod
 
 **Local connection string:**
 ```
-mongodb://localhost:27017/chainforecast
+mongodb://localhost:27017/ScriptForgeAI
 ```
 
 ---
@@ -110,7 +110,7 @@ mongodb://localhost:27017/chainforecast
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Click "Select a Project" → "New Project"
-3. Project name: `ChainForecast`
+3. Project name: `ScriptForgeAI`
 4. Click "Create"
 
 ### Enable Google+ API
@@ -125,7 +125,7 @@ mongodb://localhost:27017/chainforecast
 2. Choose "External" user type
 3. Click "Create"
 4. Fill in required fields:
-   - **App name:** ChainForecast
+   - **App name:** ScriptForgeAI
    - **User support email:** your-email@example.com
    - **Developer contact:** your-email@example.com
 5. Click "Save and Continue"
@@ -138,18 +138,18 @@ mongodb://localhost:27017/chainforecast
 1. Go to "APIs & Services" → "Credentials"
 2. Click "Create Credentials" → "OAuth 2.0 Client ID"
 3. Application type: **Web application**
-4. Name: `ChainForecast Web Client`
+4. Name: `ScriptForgeAI Web Client`
 5. **Authorized JavaScript origins:**
    ```
    http://localhost:3000
    ```
-   (Add production URL later, e.g., `https://chainforecast.com`)
+   (Add production URL later, e.g., `https://ScriptForgeAI.com`)
 
 6. **Authorized redirect URIs:**
    ```
    http://localhost:3000/api/auth/callback/google
    ```
-   (Add production URL later, e.g., `https://chainforecast.com/api/auth/callback/google`)
+   (Add production URL later, e.g., `https://ScriptForgeAI.com/api/auth/callback/google`)
 
 7. Click "Create"
 
@@ -178,7 +178,7 @@ Open the file and add your credentials:
 
 ```env
 # MongoDB Connection
-MONGODB_URI=mongodb+srv://chainforecast:YOUR_PASSWORD@cluster0.xxxxx.mongodb.net/chainforecast?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://ScriptForgeAI:YOUR_PASSWORD@cluster0.xxxxx.mongodb.net/ScriptForgeAI?retryWrites=true&w=majority
 
 # NextAuth Configuration
 NEXTAUTH_URL=http://localhost:3000
@@ -360,7 +360,7 @@ Use MongoDB Compass or Atlas UI to check:
 ```bash
 # From MongoDB Compass
 # Or use mongosh
-mongosh "mongodb+srv://cluster0.xxxxx.mongodb.net/chainforecast" --username chainforecast
+mongosh "mongodb+srv://cluster0.xxxxx.mongodb.net/ScriptForgeAI" --username ScriptForgeAI
 ```
 
 ### Google OAuth Issues

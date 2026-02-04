@@ -94,7 +94,7 @@ export default function NotFound() {
                 Oops! Forecast unavailable
               </h2>
               <p className="text-lg text-muted-foreground ivy-font">
-                The page you're looking for doesn't exist in our ChainForecast system. 
+                The page you're looking for doesn't exist in our ScriptForgeAI system. 
                 Let's get you back to analyzing sales data and customer segments!
               </p>
             </div>

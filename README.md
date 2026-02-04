@@ -1,4 +1,4 @@
-# ChainForecast 🚀
+# ScriptForgeAI 🚀
 
 > **Retail Analytics & Generative AI Marketing Platform**  
 > The first truly AI-native campaign platform where AI autonomously generates workflow graphs from natural language prompts.
@@ -14,7 +14,7 @@
 
 **Traditional Approach:** User manually drags and drops nodes to build workflows.
 
-**ChainForecast Approach:**  
+**ScriptForgeAI Approach:**  
 ```
 User: "Launch a Diwali sale for my saree shop"
   ↓
@@ -185,7 +185,7 @@ Visit: **http://localhost:3000**
 ## 📁 Project Structure
 
 ```
-ChainForecast-Next-App/
+ScriptForgeAI-Next-App/
 ├── app/
 │   ├── api/
 │   │   ├── auth/[...nextauth]/route.js  # NextAuth config

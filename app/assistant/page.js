@@ -24,7 +24,7 @@ const DUMMY_MESSAGES = [
   {
     id: 1,
     role: "assistant",
-    content: "Hello! I'm ChainForecast AI, your agentic campaign workflow executor. I can run sales forecasts, segment customers using RFM analysis, design targeted campaigns, and execute multi-step marketing workflows autonomously. What would you like me to do?",
+    content: "Hello! I'm ScriptForgeAI AI, your agentic campaign workflow executor. I can run sales forecasts, segment customers using RFM analysis, design targeted campaigns, and execute multi-step marketing workflows autonomously. What would you like me to do?",
     timestamp: "07:21 PM"
   }
 ];
@@ -103,7 +103,7 @@ export default function Assistant() {
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-foreground ivy-font">ChainForecast AI</h1>
+              <h1 className="text-3xl font-bold text-foreground ivy-font">ScriptForgeAI AI</h1>
               <p className="text-sm text-emerald-500 ivy-font">Agentic Campaign Workflow Executor</p>
             </div>
           </div>

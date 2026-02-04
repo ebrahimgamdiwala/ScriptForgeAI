@@ -195,7 +195,7 @@ export default function ProfilePage() {
             ) : (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground ivy-font">
-                  Complete your business profile to unlock full access to ChainForecast features including sales forecasting, customer segmentation, and AI-powered campaigns.
+                  Complete your business profile to unlock full access to ScriptForgeAI features including sales forecasting, customer segmentation, and AI-powered campaigns.
                 </p>
                 <Button
                   onClick={() => router.push("/onboarding")}
