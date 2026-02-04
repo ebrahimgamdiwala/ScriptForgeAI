@@ -28,7 +28,8 @@ export async function POST(request) {
     else if (fileName.endsWith('.pdf')) {
       // PDF files
       try {
-        const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default;
+        console.log('Using pdf-parse module...');
+        const { default: pdfParse } = await import('pdf-parse');
         const pdfData = await pdfParse(buffer);
         extractedText = pdfData.text;
         fileType = 'pdf';

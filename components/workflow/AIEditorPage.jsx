@@ -518,38 +518,48 @@ export default function AIEditorPage({
       // If we have the original text, find which line it actually belongs to in the current script.
       // This fixes issues where agents return incorrect or outdated line numbers,
       // or when the random fallback was assigning issues to random paragraphs.
-      if (workflow?.brief) {
-        let lines = workflow.brief.split('\n');
-        // If scriptLines is already populated (e.g. from previous render), try to use that for more up-to-date content?
-        // But here we are in the effect that processes nodes.
+      
+      // Use scriptContent if available, otherwise fallback to workflow brief
+      const currentScript = scriptContent || workflow?.brief || '';
+      
+      if (currentScript) {
+        let lines = currentScript.split('\n');
         
         let cleanOriginal = originalText ? originalText.trim() : '';
+        let foundLineIdx = -1;
         
-        // Strategy 1: Use provided original text
+        // Strategy 1: Use provided original text with loose matching
         if (cleanOriginal) {
           // 1. Exact match search
-          let matchIdx = lines.findIndex(l => l.includes(cleanOriginal));
+          foundLineIdx = lines.findIndex(l => l.includes(cleanOriginal));
           
-          // 2. Fuzzy match (if exact match fails) - check if snippet is in line
-          if (matchIdx === -1 && cleanOriginal.length > 10) {
-             const snippet = cleanOriginal.length > 30 ? cleanOriginal.substring(0, 30) : cleanOriginal;
-             matchIdx = lines.findIndex(l => l.includes(snippet));
-          }
-          
-          // 3. Reverse fuzzy - check if line is in snippet (for short lines)
-          if (matchIdx === -1 && cleanOriginal.length > 10) {
-             matchIdx = lines.findIndex(l => l.length > 10 && cleanOriginal.includes(l.trim()));
+          // 2. Normalized Match (ignore case and whitespace)
+          if (foundLineIdx === -1) {
+              const normalizedOriginal = cleanOriginal.toLowerCase().replace(/\s+/g, ' ');
+              foundLineIdx = lines.findIndex(l => l.toLowerCase().replace(/\s+/g, ' ').includes(normalizedOriginal));
           }
 
-          if (matchIdx !== -1) {
-            problemLine = matchIdx + 1;
+          // 3. Fuzzy match (if exact match fails) - check if snippet is in line
+          if (foundLineIdx === -1 && cleanOriginal.length > 10) {
+             const snippet = cleanOriginal.length > 30 ? cleanOriginal.substring(0, 30) : cleanOriginal;
+             foundLineIdx = lines.findIndex(l => l.includes(snippet));
+          }
+          
+          // 4. Reverse fuzzy - check if line is in snippet (for short lines)
+          if (foundLineIdx === -1 && cleanOriginal.length > 10) {
+             foundLineIdx = lines.findIndex(l => l.length > 10 && cleanOriginal.includes(l.trim()));
+          }
+
+          if (foundLineIdx !== -1) {
+            problemLine = foundLineIdx + 1;
           }
         }
         
-        // Strategy 2: If no original text, or text not found, try to find QUOTED text in the problem message
+        const message = data.description || data.message || String(data);
+        
+        // Strategy 2: If no original text, try to find QUOTED text in the problem message
         // e.g. "Simran's eyes are described as 'piercing blue'..."
-        if (!cleanOriginal || (cleanOriginal && problemLine === (data.lineNumber || data.line))) {
-           const message = data.description || data.message || String(data);
+        if (foundLineIdx === -1 && (!cleanOriginal || (cleanOriginal && problemLine === (data.lineNumber || data.line)))) {
            const quotedMatches = message.match(/'([^']+)'/g); // Find text in single quotes
            
            if (quotedMatches && quotedMatches.length > 0) {
@@ -560,12 +570,62 @@ export default function AIEditorPage({
                        if (matchIdx !== -1) {
                            problemLine = matchIdx + 1;
                            // Also update originalText so we can highlight it
-                           if (!cleanOriginal) originalText = textToFind; 
+                           if (!cleanOriginal) originalText = textToFind;
+                           foundLineIdx = matchIdx;
                            break;
                        }
                    }
                }
            }
+        }
+        
+        // Strategy 3: Keyword/Entity Density Matching (when other methods fail)
+        // Detect significant words in the error message and find the line with the most overlaps
+        if (foundLineIdx === -1 && message) {
+            // Extract words that look significant (Capitalized words, or longer words)
+            // Remove common words usually found in AI critiques
+            const stopWords = ['The', 'A', 'An', 'In', 'On', 'During', 'However', 'Therefore', 'This', 'That', 'It', 'Is', 'Are', 'Was', 'Were', 'Scene', 'Chapter', 'Character', 'Dialogue', 'Action', 'Transition', 'Issue', 'Error', 'Warning', 'Text'];
+            
+            // Tokenizer: split by non-word chars, filter short/stop words
+            const words = message.split(/[^a-zA-Z0-9]+/)
+                .filter(w => w.length > 3) // Filter short words
+                .filter(w => !stopWords.includes(w))
+                .filter(w => /^[A-Z]/.test(w) || w.length > 6); // Prefer capitalized or long words
+            
+            // Only proceed if we have enough distinct keywords to be meaningful
+            const uniqueWords = [...new Set(words)];
+
+            if (uniqueWords.length >= 2) {
+                let bestLineIdx = -1;
+                let maxScore = 0;
+                
+                lines.forEach((line, idx) => {
+                    if (line.trim().length < 10) return; // skip very short lines
+                    
+                    let matches = 0;
+                    uniqueWords.forEach(w => {
+                        if (line.includes(w)) matches++;
+                    });
+                    
+                    if (matches > 0) {
+                        // Score favors density to avoid matching long paragraphs just because they are long
+                        // But finding multiple keywords is key
+                        const score = matches; 
+                        if (score > maxScore) {
+                            maxScore = score;
+                            bestLineIdx = idx;
+                        }
+                    }
+                });
+                
+                // Require at least 2 keyword matches or a very strong partial match
+                if (bestLineIdx !== -1 && maxScore >= 2) { 
+                     problemLine = bestLineIdx + 1;
+                     foundLineIdx = bestLineIdx;
+                     // Set originalText to the found line content to help highlighting
+                     if (!cleanOriginal) originalText = lines[bestLineIdx];
+                }
+            }
         }
       }
 
@@ -677,7 +737,7 @@ export default function AIEditorPage({
         timestamp: new Date()
       }]);
     }
-  }, [JSON.stringify(nodes), workflow]);
+  }, [nodes, workflow, scriptContent]);
 
   // Initialize script content once, preferring latest version if available
   useEffect(() => {
