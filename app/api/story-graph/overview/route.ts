@@ -2,6 +2,7 @@
  * GET /api/story-graph/overview
  * 
  * Returns all nodes and edges for visualization
+ * Optionally filtered by workflowId query parameter
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -12,12 +13,17 @@ export async function GET(request: NextRequest) {
     // Initialize schema if needed
     await initializeGraphSchema();
 
-    // Get the full graph
-    const graphData = await getGraphOverview();
+    // Get workflowId from query params if provided
+    const { searchParams } = new URL(request.url);
+    const workflowId = searchParams.get('workflowId');
+
+    // Get the graph data, filtered by workflowId if provided
+    const graphData = await getGraphOverview(workflowId || undefined);
 
     return NextResponse.json({
       success: true,
       data: graphData,
+      workflowId: workflowId || null,
       stats: {
         totalNodes: graphData.nodes.length,
         totalEdges: graphData.edges.length,

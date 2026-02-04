@@ -95,6 +95,7 @@ export interface StoryAnalysisResult {
   chapterNumber: number;
   version: number;
   timestamp: string;
+  workflowId?: string; // Workflow ID for filtering in Neo4j
   characters: Character[];
   locations: Location[];
   objects: StoryObject[];

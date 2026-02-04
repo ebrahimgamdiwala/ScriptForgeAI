@@ -138,7 +138,7 @@ export default function StoryKnowledgeGraphPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [workflowId]);
 
   // Fetch chapters list
   const fetchChapters = useCallback(async () => {
@@ -244,15 +244,21 @@ export default function StoryKnowledgeGraphPage() {
     }
   }, []);
 
-  // Clear all graph data
+  // Clear graph data (for current workflow if workflowId is set)
   const clearGraphData = useCallback(async () => {
-    if (!confirm('Are you sure you want to clear all graph data? This cannot be undone.')) {
+    const confirmMessage = workflowId 
+      ? 'Are you sure you want to clear graph data for this workflow? This cannot be undone.'
+      : 'Are you sure you want to clear ALL graph data? This cannot be undone.';
+    
+    if (!confirm(confirmMessage)) {
       return;
     }
     
     try {
       const response = await fetch('/api/story-graph/clear', {
-        method: 'POST'
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workflowId: workflowId || undefined })
       });
       
       const data = await response.json();
@@ -269,7 +275,7 @@ export default function StoryKnowledgeGraphPage() {
       console.error('Failed to clear graph:', error);
       toast.error('Failed to clear graph data');
     }
-  }, []);
+  }, [workflowId]);
 
   // Custom node rendering
   const getNodeColor = useCallback((node: GraphNode) => {
@@ -369,9 +375,24 @@ export default function StoryKnowledgeGraphPage() {
 
       {/* Main Content */}
       <div className="pt-16 h-screen flex">
+        {/* Floating Sidebar Toggle Button - Always visible */}
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className={`fixed top-20 z-40 p-2 rounded-r-lg bg-card/95 border border-l-0 border-border backdrop-blur-xl shadow-lg transition-all duration-300 hover:bg-accent ${
+            showFilters ? 'left-72' : 'left-0'
+          }`}
+          title={showFilters ? 'Hide Filters' : 'Show Filters'}
+        >
+          {showFilters ? (
+            <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          )}
+        </button>
+
         {/* Left Sidebar - Filters & Legend */}
         {showFilters && (
-          <div className="w-72 bg-card/80 backdrop-blur-xl border-r border-border flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+          <div className="w-72 bg-card/80 backdrop-blur-xl border-r border-border flex flex-col h-[calc(100vh-4rem)] overflow-hidden shrink-0">
             <div className="p-4 border-b border-border shrink-0">
               <h3 className="text-sm font-semibold text-muted-foreground mb-3">Search</h3>
               <div className="relative">

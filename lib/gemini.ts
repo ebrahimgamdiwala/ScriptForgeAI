@@ -7,7 +7,7 @@ if (!process.env.GEMINI_API_KEY) {
 // Initialize the Gemini API client
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Reasoning/strategy: Gemini 2.5 Pro (latest premium model for best results)
+// Reasoning/strategy: Gemini 2.5 Flash for general tasks
 export const getReasoningModel = () => {
   return genAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
@@ -19,7 +19,7 @@ export const getReasoningModel = () => {
   });
 };
 
-// General text: Gemini 2.5 Pro as well (keeps quality consistent)
+// General text: Gemini 2.5 Flash
 export const getFlashModel = () => {
   return genAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
@@ -27,6 +27,18 @@ export const getFlashModel = () => {
       temperature: 0.95,
       topP: 0.95,
       maxOutputTokens: 8192,
+    },
+  });
+};
+
+// Knowledge Graph Model: Gemini 2.5 Pro for complex reasoning with higher token limits
+export const getKnowledgeGraphModel = () => {
+  return genAI.getGenerativeModel({
+    model: 'gemini-2.5-pro',
+    generationConfig: {
+      temperature: 0.7, // Lower temperature for more structured JSON output
+      topP: 0.95,
+      maxOutputTokens: 32768, // Much higher limit for comprehensive graph extraction
     },
   });
 };
@@ -206,6 +218,131 @@ function fixJsonString(json: string): string {
     .replace(/""+/g, '"');
 }
 
+// Extract partial data from truncated JSON responses
+function extractPartialData(rawText: string): any {
+  const result: any = { hasData: false };
+  
+  // Helper to extract complete array items from truncated response
+  const extractArrayItems = (text: string, key: string): any[] => {
+    const regex = new RegExp(`"${key}"\\s*:\\s*\\[`, 'i');
+    const match = text.match(regex);
+    if (!match) return [];
+    
+    const startIdx = match.index! + match[0].length;
+    const items: any[] = [];
+    let depth = 1;
+    let itemStart = startIdx;
+    let inString = false;
+    let escapeNext = false;
+    let braceDepth = 0;
+    
+    for (let i = startIdx; i < text.length && depth > 0; i++) {
+      const char = text[i];
+      
+      if (escapeNext) {
+        escapeNext = false;
+        continue;
+      }
+      
+      if (char === '\\' && inString) {
+        escapeNext = true;
+        continue;
+      }
+      
+      if (char === '"') {
+        inString = !inString;
+        continue;
+      }
+      
+      if (inString) continue;
+      
+      if (char === '{') {
+        if (braceDepth === 0) itemStart = i;
+        braceDepth++;
+      } else if (char === '}') {
+        braceDepth--;
+        if (braceDepth === 0) {
+          // Complete object found
+          const itemText = text.substring(itemStart, i + 1);
+          try {
+            const item = JSON.parse(itemText);
+            items.push(item);
+          } catch (e) {
+            // Try to fix and parse
+            try {
+              const fixed = fixJsonString(itemText);
+              const item = JSON.parse(fixed);
+              items.push(item);
+            } catch (e2) {
+              // Skip malformed item
+            }
+          }
+        }
+      } else if (char === '[') {
+        depth++;
+      } else if (char === ']') {
+        depth--;
+      }
+    }
+    
+    return items;
+  };
+  
+  // Try to extract each type of data
+  const characters = extractArrayItems(rawText, 'characters');
+  if (characters.length > 0) {
+    result.characters = characters;
+    result.hasData = true;
+  }
+  
+  const locations = extractArrayItems(rawText, 'locations');
+  if (locations.length > 0) {
+    result.locations = locations;
+    result.hasData = true;
+  }
+  
+  const objects = extractArrayItems(rawText, 'objects');
+  if (objects.length > 0) {
+    result.objects = objects;
+    result.hasData = true;
+  }
+  
+  const events = extractArrayItems(rawText, 'events');
+  if (events.length > 0) {
+    result.events = events;
+    result.hasData = true;
+  }
+  
+  const relationships = extractArrayItems(rawText, 'relationships');
+  if (relationships.length > 0) {
+    result.relationships = relationships;
+    result.hasData = true;
+  }
+  
+  const plotThreads = extractArrayItems(rawText, 'plotThreads');
+  if (plotThreads.length > 0) {
+    result.plotThreads = plotThreads;
+    result.hasData = true;
+  }
+  
+  const chronologicalEvents = extractArrayItems(rawText, 'chronologicalEvents');
+  if (chronologicalEvents.length > 0) {
+    result.chronologicalEvents = chronologicalEvents;
+    result.hasData = true;
+  }
+  
+  console.log('Extracted partial data:', {
+    characters: result.characters?.length || 0,
+    locations: result.locations?.length || 0,
+    objects: result.objects?.length || 0,
+    events: result.events?.length || 0,
+    relationships: result.relationships?.length || 0,
+    plotThreads: result.plotThreads?.length || 0
+  });
+  
+  return result;
+}
+
 // Create a fallback response when JSON parsing fails
 function createFallbackResponse(rawText: string): any {
   // Detect the type of agent response expected and return appropriate fallback
@@ -214,9 +351,30 @@ function createFallbackResponse(rawText: string): any {
   // Store more of the raw response for debugging
   const truncatedRaw = rawText.length > 3000 ? rawText.substring(0, 3000) + '...[truncated]' : rawText;
   
+  // Try to extract partial data from truncated responses
+  const partialData = extractPartialData(rawText);
+  
+  // Check for Knowledge Graph response
+  if (lowerText.includes('"characters"') || lowerText.includes('"locations"') || lowerText.includes('"plotthreads"')) {
+    return {
+      characters: partialData.characters || [],
+      locations: partialData.locations || [],
+      objects: partialData.objects || [],
+      events: partialData.events || [],
+      relationships: partialData.relationships || [],
+      plotThreads: partialData.plotThreads || [],
+      _parseError: partialData.hasData ? false : true,
+      _partialExtraction: partialData.hasData,
+      _errorMessage: partialData.hasData 
+        ? 'Partial data extracted from truncated response' 
+        : 'The AI returned an incomplete or malformed JSON response. Please try running the agent again.',
+      _rawResponse: truncatedRaw
+    };
+  }
+  
   if (lowerText.includes('chronological') || lowerText.includes('timeline') || lowerText.includes('temporal')) {
     return {
-      chronologicalEvents: [],
+      chronologicalEvents: partialData.chronologicalEvents || [],
       flashbacks: [],
       flashForwards: [],
       causalChains: [],

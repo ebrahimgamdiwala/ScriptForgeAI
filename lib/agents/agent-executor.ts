@@ -3,7 +3,7 @@
  * Uses Gemini API for intelligent processing with specialized prompts per agent
  */
 
-import { getReasoningModel, generateWithRetry, parseJSONFromResponse } from '@/lib/gemini';
+import { getReasoningModel, getKnowledgeGraphModel, generateWithRetry, parseJSONFromResponse } from '@/lib/gemini';
 import { AGENT_DEFINITIONS } from './definitions';
 import { updateGraph, getGraphOverview, clearGraph } from './story-knowledge-graph';
 
@@ -20,6 +20,7 @@ export interface AgentContext {
   teaserContent?: TeaserContent;
   previousResults: Record<string, any>;
   customPrompt?: string | null; // User-provided custom prompt override
+  workflowId?: string; // Workflow ID for Neo4j storage
 }
 
 export interface StoryContext {
@@ -255,7 +256,9 @@ export async function executeAgent(
     case 'story-intelligence':
       return executeStoryIntelligence(model, context);
     case 'knowledge-graph':
-      return executeKnowledgeGraph(model, context);
+      // Use dedicated Gemini 2.5 Pro model with higher token limits for comprehensive graph extraction
+      const kgModel = getKnowledgeGraphModel();
+      return executeKnowledgeGraph(kgModel, context);
     case 'temporal-reasoning':
       return executeTemporalReasoning(model, context);
     case 'continuity-validator':
@@ -339,155 +342,195 @@ async function executeKnowledgeGraph(
   model: any,
   context: AgentContext
 ): Promise<{ result: KnowledgeGraphData; updatedContext: AgentContext }> {
-  const prompt = `You are the Story Knowledge Graph Agent - the memory of the story system.
+  const prompt = `You are the Story Knowledge Graph Agent - the comprehensive memory system for narrative analysis.
 
-STORY CONTEXT:
-${JSON.stringify(context.storyContext || {}, null, 2)}
-
-STORY/MANUSCRIPT:
+STORY/MANUSCRIPT TO ANALYZE:
 ${context.storyBrief}
 ${context.manuscript ? `\n\nFULL MANUSCRIPT:\n${context.manuscript}` : ''}
 
-YOUR TASK:
-Extract ALL story elements and create a comprehensive knowledge graph including:
-1. Characters (name, role, traits, motivations, relationships)
-2. Locations (name, type, description, significance)
-3. Objects (important items, artifacts, tools)
-4. Events (key plot points, actions, revelations)
-5. Relationships (between characters, including type and strength)
-6. Plot Threads (main plot, subplots, their status)
+YOUR MISSION: Extract ALL story elements and create a complete knowledge graph.
 
-Return ONLY a valid JSON object with this structure:
+EXTRACTION REQUIREMENTS:
+1. CHARACTERS: Extract EVERY named character with their role, personality traits, motivations, and current status
+2. LOCATIONS: Extract ALL named places, buildings, cities, and geographic locations
+3. OBJECTS: Extract important items, artifacts, keys, documents, or symbolic objects
+4. EVENTS: Extract major plot events, revelations, confrontations, and turning points (up to 20)
+5. RELATIONSHIPS: Map connections between characters (family, romantic, professional, rivalry, etc.)
+6. PLOT THREADS: Identify main plot and all subplots
+
+CRITICAL RULES:
+- Return ONLY valid JSON - no markdown code blocks, no explanations before or after
+- Ensure the JSON is complete with all closing braces and brackets
+- Use descriptive IDs like "char-arjun-malhotra" not just "char-1"
+- Include all details from the text
+
+Return this JSON structure:
 {
   "characters": [
     {
-      "id": "char-1",
-      "name": "Character Name",
+      "id": "char-character-name",
+      "name": "Full Character Name",
       "role": "protagonist|antagonist|supporting|minor",
-      "description": "brief description",
-      "traits": ["trait1", "trait2"],
-      "motivations": ["motivation1"],
-      "relationships": ["relationship to other characters"],
-      "firstAppearance": "Chapter 1",
-      "status": "alive|deceased|unknown"
+      "description": "Who they are and their role in the story",
+      "traits": ["personality trait 1", "personality trait 2"],
+      "motivations": ["what drives them", "their goals"],
+      "relationships": ["relationship description to other characters"],
+      "firstAppearance": "Chapter X",
+      "status": "alive|deceased|unknown|unstable"
     }
   ],
   "locations": [
     {
-      "id": "loc-1",
+      "id": "loc-location-name",
       "name": "Location Name",
-      "type": "city|village|building|natural|other",
-      "description": "brief description",
-      "significance": "why it matters",
-      "connectedLocations": ["loc-2"]
+      "type": "city|building|room|natural|complex|other",
+      "description": "Description of the place",
+      "significance": "Why this location matters to the plot",
+      "connectedLocations": ["loc-other-location"]
     }
   ],
   "objects": [
     {
-      "id": "obj-1",
+      "id": "obj-object-name",
       "name": "Object Name",
-      "type": "weapon|artifact|tool|personal|symbolic",
-      "description": "brief description",
-      "significance": "plot importance",
-      "currentLocation": "where it is",
-      "owner": "who has it"
+      "type": "artifact|tool|document|key|symbolic|weapon|technology",
+      "description": "What the object is",
+      "significance": "Why it matters to the plot",
+      "currentLocation": "Where it currently is",
+      "owner": "Who possesses it"
     }
   ],
   "events": [
     {
-      "id": "event-1",
+      "id": "event-descriptive-name",
       "name": "Event Name",
-      "description": "what happened",
+      "description": "What happened in detail",
       "chapter": 1,
-      "timestamp": "when in story time",
-      "participants": ["char-1"],
-      "location": "loc-1",
-      "causedBy": [],
-      "effects": ["what resulted"],
-      "type": "action|dialogue|revelation|conflict|resolution"
+      "timestamp": "When in story time (e.g., 'Day 1, Morning', 'Seven years ago')",
+      "participants": ["char-character-name"],
+      "location": "loc-location-name",
+      "causedBy": ["event-previous"],
+      "effects": ["What resulted from this event"],
+      "type": "action|dialogue|revelation|conflict|resolution|mystery"
     }
   ],
   "relationships": [
     {
-      "id": "rel-1",
-      "from": "char-1",
-      "to": "char-2",
-      "type": "family|romantic|friendship|rivalry|professional|other",
-      "description": "nature of relationship",
+      "id": "rel-descriptive",
+      "from": "char-character-a",
+      "to": "char-character-b",
+      "type": "family|romantic|friendship|rivalry|professional|mysterious|antagonistic",
+      "description": "Nature of their relationship",
       "strength": 0.8,
-      "evolution": ["how it changed"]
+      "evolution": ["How it has changed"]
     }
   ],
   "plotThreads": [
     {
-      "id": "plot-1",
-      "name": "Main Plot Name",
-      "description": "what the thread is about",
+      "id": "plot-thread-name",
+      "name": "Plot Thread Name",
+      "description": "What this storyline is about",
       "status": "active|resolved|dormant|foreshadowed",
       "startChapter": 1,
-      "relatedCharacters": ["char-1"],
-      "relatedEvents": ["event-1"]
+      "relatedCharacters": ["char-character-name"],
+      "relatedEvents": ["event-name"]
     }
   ]
-}`;
+}
+
+Analyze the manuscript thoroughly and return the complete JSON:`;
 
   const response = await generateWithRetry(model, prompt, 3);
   const knowledgeGraph = parseJSONFromResponse(response) as KnowledgeGraphData;
 
-  // Store in Neo4j if available
-  try {
-    await updateGraph({
-      chapterId: 'workflow-analysis',
-      chapterNumber: 1,
-      summary: context.storyBrief.substring(0, 200),
-      characters: knowledgeGraph.characters,
-      locations: knowledgeGraph.locations,
-      objects: knowledgeGraph.objects,
-      events: knowledgeGraph.events.map(e => ({
-        ...e,
-        characters: e.participants || [],
-        type: e.type || 'action'
-      })),
-      relationships: knowledgeGraph.relationships.map(r => ({
-        id: r.id,
-        source: r.from,
-        sourceType: 'Character' as const,
-        target: r.to,
-        targetType: 'Character' as const,
-        type: r.type,
-        description: r.description,
-        strength: r.strength
-      })),
-      plotThreads: knowledgeGraph.plotThreads.map(p => ({
-        ...p,
-        status: p.status === 'active' ? 'developing' : 
-                p.status === 'resolved' ? 'resolved' :
-                p.status === 'dormant' ? 'abandoned' : 'introduced'
-      })),
-      stateChanges: [],
-      temporalMarkers: [],
-      version: 1,
-      timestamp: new Date().toISOString(),
-      context: {
-        activeCharacters: knowledgeGraph.characters.map(c => c.name),
-        currentLocation: knowledgeGraph.locations[0]?.name || null,
-        currentTimeline: 'present',
-        recentEvents: knowledgeGraph.events.slice(0, 5).map(e => e.name),
-        openPlotThreads: knowledgeGraph.plotThreads.filter(p => p.status === 'active').map(p => p.name),
-        mood: 'neutral',
-        tension: 'medium' as const
-      }
-    });
-  } catch (error) {
-    console.warn('Failed to store in Neo4j (optional):', error);
+  // Ensure arrays exist even if parsing partially failed
+  const safeKnowledgeGraph: KnowledgeGraphData = {
+    characters: knowledgeGraph.characters || [],
+    locations: knowledgeGraph.locations || [],
+    objects: knowledgeGraph.objects || [],
+    events: knowledgeGraph.events || [],
+    relationships: knowledgeGraph.relationships || [],
+    plotThreads: knowledgeGraph.plotThreads || []
+  };
+
+  // Log extraction results for debugging
+  console.log('Knowledge Graph extraction results:', {
+    characters: safeKnowledgeGraph.characters.length,
+    locations: safeKnowledgeGraph.locations.length,
+    objects: safeKnowledgeGraph.objects.length,
+    events: safeKnowledgeGraph.events.length,
+    relationships: safeKnowledgeGraph.relationships.length,
+    plotThreads: safeKnowledgeGraph.plotThreads.length,
+    parseError: (knowledgeGraph as any)._parseError || false
+  });
+
+  // Store in Neo4j if we have any data
+  const hasData = safeKnowledgeGraph.characters.length > 0 || 
+                  safeKnowledgeGraph.locations.length > 0 || 
+                  safeKnowledgeGraph.events.length > 0;
+
+  if (hasData) {
+    try {
+      // Use workflowId as the chapterId to uniquely identify this workflow's data
+      const chapterId = context.workflowId ? `workflow-${context.workflowId}` : 'workflow-analysis';
+      
+      const storeResult = await updateGraph({
+        chapterId: chapterId,
+        chapterNumber: 1,
+        summary: context.storyBrief.substring(0, 200),
+        workflowId: context.workflowId, // Pass workflowId for filtering
+        characters: safeKnowledgeGraph.characters,
+        locations: safeKnowledgeGraph.locations,
+        objects: safeKnowledgeGraph.objects,
+        events: safeKnowledgeGraph.events.map(e => ({
+          ...e,
+          characters: e.participants || [],
+          type: e.type || 'action'
+        })),
+        relationships: safeKnowledgeGraph.relationships.map(r => ({
+          id: r.id,
+          source: r.from,
+          sourceType: 'Character' as const,
+          target: r.to,
+          targetType: 'Character' as const,
+          type: r.type,
+          description: r.description,
+          strength: r.strength
+        })),
+        plotThreads: safeKnowledgeGraph.plotThreads.map(p => ({
+          ...p,
+          status: p.status === 'active' ? 'developing' : 
+                  p.status === 'resolved' ? 'resolved' :
+                  p.status === 'dormant' ? 'abandoned' : 'introduced'
+        })),
+        stateChanges: [],
+        temporalMarkers: [],
+        version: 1,
+        timestamp: new Date().toISOString(),
+        context: {
+          activeCharacters: safeKnowledgeGraph.characters.map(c => c.name),
+          currentLocation: safeKnowledgeGraph.locations[0]?.name || null,
+          currentTimeline: 'present',
+          recentEvents: safeKnowledgeGraph.events.slice(0, 5).map(e => e.name),
+          openPlotThreads: safeKnowledgeGraph.plotThreads.filter(p => p.status === 'active').map(p => p.name),
+          mood: 'neutral',
+          tension: 'medium' as const
+        }
+      });
+      console.log('Neo4j storage result:', storeResult);
+    } catch (error) {
+      console.warn('Failed to store in Neo4j (optional):', error);
+    }
+  } else {
+    console.warn('No knowledge graph data to store - AI response may have been truncated');
   }
 
   return {
-    result: knowledgeGraph,
+    result: safeKnowledgeGraph,
     updatedContext: {
       ...context,
-      knowledgeGraph,
-      previousResults: { ...context.previousResults, 'knowledge-graph': knowledgeGraph }
+      knowledgeGraph: safeKnowledgeGraph,
+      previousResults: { ...context.previousResults, 'knowledge-graph': safeKnowledgeGraph }
     }
   };
 }

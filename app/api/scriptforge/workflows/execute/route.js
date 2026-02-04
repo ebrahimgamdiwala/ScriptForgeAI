@@ -37,6 +37,7 @@ async function executeSingleAgent(workflow, nodeId, agentType, customPrompt = nu
       manuscript: workflow.inputs?.manuscript || workflow.inputs?.fullText || '',
       previousResults: {},
       customPrompt: customPrompt || node.data.customPrompt || null,
+      workflowId: workflow._id.toString(),
     };
 
     // Collect results from previously executed agents
@@ -216,7 +217,8 @@ export async function POST(req) {
     let agentContext = {
       storyBrief: workflow.brief || '',
       manuscript: workflow.inputs?.manuscript || workflow.inputs?.fullText || '',
-      previousResults: {}
+      previousResults: {},
+      workflowId: workflow._id.toString(),
     };
 
     for (let i = 0; i < nodesClone.length; i++) {

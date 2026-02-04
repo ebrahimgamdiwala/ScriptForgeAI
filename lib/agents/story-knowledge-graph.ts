@@ -87,7 +87,8 @@ async function storeChapter(analysis: StoryAnalysisResult): Promise<void> {
           ch.timestamp = $timestamp,
           ch.summary = $summary,
           ch.mood = $mood,
-          ch.tension = $tension
+          ch.tension = $tension,
+          ch.workflowId = $workflowId
     `, {
       id: analysis.chapterId,
       number: analysis.chapterNumber,
@@ -95,7 +96,8 @@ async function storeChapter(analysis: StoryAnalysisResult): Promise<void> {
       timestamp: analysis.timestamp,
       summary: analysis.summary,
       mood: analysis.context.mood,
-      tension: analysis.context.tension
+      tension: analysis.context.tension,
+      workflowId: analysis.workflowId || null
     });
   });
 }
@@ -103,15 +105,16 @@ async function storeChapter(analysis: StoryAnalysisResult): Promise<void> {
 /**
  * Store characters in the graph
  */
-async function storeCharacters(characters: Character[], chapterId: string, version: number): Promise<void> {
+async function storeCharacters(characters: Character[], chapterId: string, version: number, workflowId?: string): Promise<void> {
   for (const char of characters) {
     await runWriteTransaction(async (tx) => {
-      // Create or merge character node
+      // Create or merge character node with workflowId
       await tx.run(`
         MERGE (c:Character { id: $id })
         SET c.name = $name,
             c.role = $role,
             c.description = $description,
+            c.workflowId = $workflowId,
             c.lastUpdated = datetime()
         WITH c
         MATCH (ch:Chapter { id: $chapterId })
@@ -121,7 +124,8 @@ async function storeCharacters(characters: Character[], chapterId: string, versi
         name: char.name,
         role: char.role || 'unknown',
         description: char.description || '',
-        chapterId
+        chapterId,
+        workflowId: workflowId || null
       });
 
       // Create state node for temporal tracking (append, never overwrite)
@@ -152,7 +156,7 @@ async function storeCharacters(characters: Character[], chapterId: string, versi
 /**
  * Store locations in the graph
  */
-async function storeLocations(locations: Location[], chapterId: string): Promise<void> {
+async function storeLocations(locations: Location[], chapterId: string, workflowId?: string): Promise<void> {
   for (const loc of locations) {
     await runWriteTransaction(async (tx) => {
       await tx.run(`
@@ -160,6 +164,7 @@ async function storeLocations(locations: Location[], chapterId: string): Promise
         SET l.name = $name,
             l.type = $type,
             l.description = $description,
+            l.workflowId = $workflowId,
             l.lastUpdated = datetime()
         WITH l
         MATCH (ch:Chapter { id: $chapterId })
@@ -169,7 +174,8 @@ async function storeLocations(locations: Location[], chapterId: string): Promise
         name: loc.name,
         type: loc.type || 'unknown',
         description: loc.description || '',
-        chapterId
+        chapterId,
+        workflowId: workflowId || null
       });
 
       // Handle containment relationships
@@ -190,7 +196,7 @@ async function storeLocations(locations: Location[], chapterId: string): Promise
 /**
  * Store objects in the graph
  */
-async function storeObjects(objects: StoryObject[], chapterId: string): Promise<void> {
+async function storeObjects(objects: StoryObject[], chapterId: string, workflowId?: string): Promise<void> {
   for (const obj of objects) {
     await runWriteTransaction(async (tx) => {
       await tx.run(`
@@ -199,6 +205,7 @@ async function storeObjects(objects: StoryObject[], chapterId: string): Promise<
             o.type = $type,
             o.description = $description,
             o.significance = $significance,
+            o.workflowId = $workflowId,
             o.lastUpdated = datetime()
         WITH o
         MATCH (ch:Chapter { id: $chapterId })
@@ -209,7 +216,8 @@ async function storeObjects(objects: StoryObject[], chapterId: string): Promise<
         type: obj.type || 'prop',
         description: obj.description || '',
         significance: obj.significance || '',
-        chapterId
+        chapterId,
+        workflowId: workflowId || null
       });
 
       // Handle ownership
@@ -230,7 +238,7 @@ async function storeObjects(objects: StoryObject[], chapterId: string): Promise<
 /**
  * Store events in the graph
  */
-async function storeEvents(events: Event[], chapterId: string): Promise<void> {
+async function storeEvents(events: Event[], chapterId: string, workflowId?: string): Promise<void> {
   for (const evt of events) {
     await runWriteTransaction(async (tx) => {
       await tx.run(`
@@ -241,6 +249,7 @@ async function storeEvents(events: Event[], chapterId: string): Promise<void> {
             e.isTemporal = $isTemporal,
             e.temporalType = $temporalType,
             e.timestamp = $timestamp,
+            e.workflowId = $workflowId,
             e.lastUpdated = datetime()
         WITH e
         MATCH (ch:Chapter { id: $chapterId })
@@ -253,7 +262,8 @@ async function storeEvents(events: Event[], chapterId: string): Promise<void> {
         isTemporal: evt.isTemporal || false,
         temporalType: evt.temporalType || 'current',
         timestamp: evt.timestamp || '',
-        chapterId
+        chapterId,
+        workflowId: workflowId || null
       });
 
       // Link event to location
@@ -286,7 +296,7 @@ async function storeEvents(events: Event[], chapterId: string): Promise<void> {
 /**
  * Store plot threads in the graph
  */
-async function storePlotThreads(plotThreads: PlotThread[], chapterId: string): Promise<void> {
+async function storePlotThreads(plotThreads: PlotThread[], chapterId: string, workflowId?: string): Promise<void> {
   for (const plot of plotThreads) {
     await runWriteTransaction(async (tx) => {
       await tx.run(`
@@ -294,6 +304,7 @@ async function storePlotThreads(plotThreads: PlotThread[], chapterId: string): P
         SET p.name = $name,
             p.description = $description,
             p.status = $status,
+            p.workflowId = $workflowId,
             p.lastUpdated = datetime()
         WITH p
         MATCH (ch:Chapter { id: $chapterId })
@@ -303,7 +314,8 @@ async function storePlotThreads(plotThreads: PlotThread[], chapterId: string): P
         name: plot.name,
         description: plot.description,
         status: plot.status,
-        chapterId
+        chapterId,
+        workflowId: workflowId || null
       });
 
       // Link to related characters
@@ -394,19 +406,21 @@ async function storeStateChanges(stateChanges: StateChange[], chapterId: string,
  */
 export async function updateGraph(analysis: StoryAnalysisResult): Promise<{ success: boolean; message: string }> {
   try {
+    const workflowId = analysis.workflowId;
+    
     // Store in sequence to maintain data integrity
     await storeChapter(analysis);
-    await storeCharacters(analysis.characters, analysis.chapterId, analysis.version);
-    await storeLocations(analysis.locations, analysis.chapterId);
-    await storeObjects(analysis.objects, analysis.chapterId);
-    await storeEvents(analysis.events, analysis.chapterId);
-    await storePlotThreads(analysis.plotThreads, analysis.chapterId);
+    await storeCharacters(analysis.characters, analysis.chapterId, analysis.version, workflowId);
+    await storeLocations(analysis.locations, analysis.chapterId, workflowId);
+    await storeObjects(analysis.objects, analysis.chapterId, workflowId);
+    await storeEvents(analysis.events, analysis.chapterId, workflowId);
+    await storePlotThreads(analysis.plotThreads, analysis.chapterId, workflowId);
     await storeRelationships(analysis.relationships);
     await storeStateChanges(analysis.stateChanges, analysis.chapterId, analysis.version);
 
     return { 
       success: true, 
-      message: `Successfully stored ${analysis.characters.length} characters, ${analysis.locations.length} locations, ${analysis.events.length} events` 
+      message: `Successfully stored ${analysis.characters.length} characters, ${analysis.locations.length} locations, ${analysis.events.length} events for workflow ${workflowId || 'unknown'}` 
     };
   } catch (error) {
     console.error('Failed to update graph:', error);
@@ -418,19 +432,36 @@ export async function updateGraph(analysis: StoryAnalysisResult): Promise<{ succ
 }
 
 /**
- * Get graph overview - all nodes and edges
+ * Get graph overview - all nodes and edges, optionally filtered by workflowId
  */
-export async function getGraphOverview(): Promise<GraphData> {
+export async function getGraphOverview(workflowId?: string): Promise<GraphData> {
   try {
     const session = getSession();
     
     try {
-      // Get all nodes
-      const nodesResult = await session.run(`
-        MATCH (n)
-        WHERE n:Character OR n:Location OR n:Object OR n:Event OR n:PlotThread OR n:Chapter
-        RETURN n, labels(n) as labels
-      `);
+      // Build query based on whether we're filtering by workflowId
+      let nodesQuery: string;
+      let nodesParams: Record<string, any> = {};
+      
+      if (workflowId) {
+        // Filter by workflowId - only get nodes belonging to this workflow
+        nodesQuery = `
+          MATCH (n)
+          WHERE (n:Character OR n:Location OR n:Object OR n:Event OR n:PlotThread OR n:Chapter)
+          AND (n.workflowId = $workflowId OR n.id STARTS WITH 'workflow-' + $workflowId)
+          RETURN n, labels(n) as labels
+        `;
+        nodesParams = { workflowId };
+      } else {
+        // Get all nodes
+        nodesQuery = `
+          MATCH (n)
+          WHERE n:Character OR n:Location OR n:Object OR n:Event OR n:PlotThread OR n:Chapter
+          RETURN n, labels(n) as labels
+        `;
+      }
+      
+      const nodesResult = await session.run(nodesQuery, nodesParams);
 
       const nodes: GraphNode[] = nodesResult.records.map(record => {
         const node = record.get('n');
@@ -447,13 +478,33 @@ export async function getGraphOverview(): Promise<GraphData> {
         };
       });
 
-      // Get all relationships
-      const edgesResult = await session.run(`
-        MATCH (a)-[r]->(b)
-        WHERE (a:Character OR a:Location OR a:Object OR a:Event OR a:PlotThread OR a:Chapter)
-        AND (b:Character OR b:Location OR b:Object OR b:Event OR b:PlotThread OR b:Chapter)
-        RETURN a.id as sourceId, b.id as targetId, type(r) as relType, properties(r) as props
-      `);
+      // Get node IDs for filtering edges
+      const nodeIds = nodes.map(n => n.id);
+      
+      // Get relationships between the filtered nodes
+      let edgesQuery: string;
+      let edgesParams: Record<string, any> = {};
+      
+      if (workflowId && nodeIds.length > 0) {
+        edgesQuery = `
+          MATCH (a)-[r]->(b)
+          WHERE a.id IN $nodeIds AND b.id IN $nodeIds
+          RETURN a.id as sourceId, b.id as targetId, type(r) as relType, properties(r) as props
+        `;
+        edgesParams = { nodeIds };
+      } else if (!workflowId) {
+        edgesQuery = `
+          MATCH (a)-[r]->(b)
+          WHERE (a:Character OR a:Location OR a:Object OR a:Event OR a:PlotThread OR a:Chapter)
+          AND (b:Character OR b:Location OR b:Object OR b:Event OR b:PlotThread OR b:Chapter)
+          RETURN a.id as sourceId, b.id as targetId, type(r) as relType, properties(r) as props
+        `;
+      } else {
+        // No nodes found for this workflow
+        return { nodes: [], edges: [] };
+      }
+      
+      const edgesResult = await session.run(edgesQuery, edgesParams);
 
       const edges: GraphEdge[] = edgesResult.records.map((record, index) => {
         const relType = record.get('relType');
@@ -652,9 +703,19 @@ export async function getAllChapters(): Promise<{ id: string; number: number; su
 /**
  * Clear all data from the graph (use with caution!)
  */
-export async function clearGraph(): Promise<void> {
+export async function clearGraph(workflowId?: string): Promise<void> {
   await runWriteTransaction(async (tx) => {
-    await tx.run('MATCH (n) DETACH DELETE n');
+    if (workflowId) {
+      // Clear only data for the specific workflow
+      await tx.run(`
+        MATCH (n)
+        WHERE n.workflowId = $workflowId OR n.id STARTS WITH 'workflow-' + $workflowId
+        DETACH DELETE n
+      `, { workflowId });
+    } else {
+      // Clear all data
+      await tx.run('MATCH (n) DETACH DELETE n');
+    }
   });
 }
 
