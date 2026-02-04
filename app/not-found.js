@@ -91,11 +91,11 @@ export default function NotFound() {
             {/* Title and Description */}
             <div className="space-y-3 max-w-2xl mx-auto">
               <h2 className="text-3xl sm:text-4xl font-bold text-foreground ivy-font">
-                Oops! Forecast unavailable
+                Oops! Page not found
               </h2>
               <p className="text-lg text-muted-foreground ivy-font">
-                The page you're looking for doesn't exist in our ScriptForgeAI system. 
-                Let's get you back to analyzing sales data and customer segments!
+                The page you're looking for doesn't exist in our ScriptForge system. 
+                Let's get you back to your writing projects and story dashboard!
               </p>
             </div>
 

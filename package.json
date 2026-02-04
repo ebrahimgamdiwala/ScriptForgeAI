@@ -1,7 +1,8 @@
 {
-  "name": "scriptforgeai",
+  "name": "scriptforge",
   "version": "0.1.0",
   "private": true,
+  "description": "ScriptForge - Smart Script Writing Assistant. AI-powered intelligent writing assistant for maintaining narrative continuity in screenplays and long-form stories",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

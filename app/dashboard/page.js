@@ -13,72 +13,72 @@ import {
   ComposedChart, Scatter
 } from "recharts";
 import {
-  ArrowUpRight, ArrowDownRight, DollarSign, TrendingUp,
-  CreditCard, Activity, Users, ShoppingCart, Wallet, Target,
-  PiggyBank, TrendingDown, Sparkles
+  ArrowUpRight, ArrowDownRight, BookOpen, TrendingUp,
+  Users, Activity, GitBranch, FileText, Sparkles, Brain,
+  PenTool, Target, Network, Shield
 } from "lucide-react";
 
-// Sales Forecasting Data (Historical + 4-Week Forecast)
-const revenueData = [
-  { month: "Week 1", actual: 45000, forecast: 45000, confidence: 100 },
-  { month: "Week 2", actual: 52000, forecast: 52000, confidence: 100 },
-  { month: "Week 3", actual: 48000, forecast: 48000, confidence: 100 },
-  { month: "Week 4", actual: 61000, forecast: 61000, confidence: 100 },
-  { month: "Week 5", actual: 55000, forecast: 55000, confidence: 100 },
-  { month: "Week 6", actual: 67000, forecast: 67000, confidence: 100 },
-  { month: "Week 7", actual: 72000, forecast: 72000, confidence: 100 },
-  { month: "Week 8", actual: 69000, forecast: 69000, confidence: 100 },
-  { month: "Week 9", actual: null, forecast: 73200, confidence: 92 },
-  { month: "Week 10", actual: null, forecast: 76800, confidence: 88 },
-  { month: "Week 11", actual: null, forecast: 81500, confidence: 85 },
-  { month: "Week 12", actual: null, forecast: 85300, confidence: 82 },
+// Story Progress Data
+const progressData = [
+  { chapter: "Ch 1", wordCount: 4500, targetCount: 5000, completion: 90 },
+  { chapter: "Ch 2", wordCount: 5200, targetCount: 5000, completion: 100 },
+  { chapter: "Ch 3", wordCount: 4800, targetCount: 5000, completion: 96 },
+  { chapter: "Ch 4", wordCount: 6100, targetCount: 5000, completion: 100 },
+  { chapter: "Ch 5", wordCount: 5500, targetCount: 5000, completion: 100 },
+  { chapter: "Ch 6", wordCount: 6700, targetCount: 5000, completion: 100 },
+  { chapter: "Ch 7", wordCount: 7200, targetCount: 5000, completion: 100 },
+  { chapter: "Ch 8", wordCount: 6900, targetCount: 5000, completion: 100 },
+  { chapter: "Ch 9", wordCount: 3200, targetCount: 5000, completion: 64 },
+  { chapter: "Ch 10", wordCount: 0, targetCount: 5000, completion: 0 },
+  { chapter: "Ch 11", wordCount: 0, targetCount: 5000, completion: 0 },
+  { chapter: "Ch 12", wordCount: 0, targetCount: 5000, completion: 0 },
 ];
 
-const customerSegmentData = [
-  { name: "Champions", value: 28, count: 2847, avgSpend: 8500 },
-  { name: "Loyal Customers", value: 22, count: 2234, avgSpend: 5200 },
-  { name: "At Risk", value: 18, count: 1829, avgSpend: 3800 },
-  { name: "New Customers", value: 32, count: 3251, avgSpend: 2100 },
+const characterActivityData = [
+  { name: "Sarah", appearances: 28, dialogueLines: 284, arcProgress: 85 },
+  { name: "Marcus", appearances: 22, dialogueLines: 223, arcProgress: 72 },
+  { name: "Elena", appearances: 18, dialogueLines: 182, arcProgress: 68 },
+  { name: "Detective Ray", appearances: 15, dialogueLines: 151, arcProgress: 55 },
 ];
 
-const suggestedOffersData = [
-  { id: 1, segment: "Champions", offer: "VIP Loyalty Program - 25% Off", priority: "High", expectedROI: "+340%" },
-  { id: 2, segment: "Champions", offer: "Early Access to New Products", priority: "High", expectedROI: "+280%" },
-  { id: 3, segment: "Loyal Customers", offer: "Bundle Discount - 15% Off", priority: "Medium", expectedROI: "+220%" },
-  { id: 4, segment: "At Risk", offer: "Win-Back Campaign - 30% Off", priority: "High", expectedROI: "+180%" },
-  { id: 5, segment: "At Risk", offer: "Personalized Re-engagement Email", priority: "Medium", expectedROI: "+150%" },
-  { id: 6, segment: "New Customers", offer: "Welcome Offer - 10% Off Next Purchase", priority: "Medium", expectedROI: "+125%" },
-  { id: 7, segment: "Loyal Customers", offer: "Referral Rewards Program", priority: "Low", expectedROI: "+95%" },
-  { id: 8, segment: "New Customers", offer: "First Purchase Free Shipping", priority: "Low", expectedROI: "+85%" },
+const storyElementsData = [
+  { id: 1, type: "Plot Thread", element: "The Mystery of the Missing Journal", status: "Active", chapters: "1-9" },
+  { id: 2, type: "Plot Thread", element: "Sarah's Transformation Arc", status: "Active", chapters: "1-9" },
+  { id: 3, type: "Subplot", element: "Marcus and Elena's Romance", status: "Active", chapters: "3-9" },
+  { id: 4, type: "Plot Thread", element: "The Corporate Conspiracy", status: "Resolved", chapters: "1-7" },
+  { id: 5, type: "Subplot", element: "Detective Ray's Investigation", status: "Active", chapters: "2-9" },
+  { id: 6, type: "Mystery", element: "Who sent the anonymous letter?", status: "Active", chapters: "5-9" },
+  { id: 7, type: "Character", element: "Sarah's mentor relationship", status: "Active", chapters: "2-9" },
+  { id: 8, type: "Location", element: "The Old Library recurring setting", status: "Active", chapters: "1-9" },
 ];
 
-const investmentData = [
-  { month: "Jan", portfolio: 125000, target: 130000 },
-  { month: "Feb", portfolio: 132000, target: 135000 },
-  { month: "Mar", portfolio: 128000, target: 140000 },
-  { month: "Apr", portfolio: 145000, target: 145000 },
-  { month: "May", portfolio: 152000, target: 150000 },
-  { month: "Jun", portfolio: 148000, target: 155000 },
-  { month: "Jul", portfolio: 165000, target: 160000 },
-  { month: "Aug", portfolio: 171000, target: 165000 },
-  { month: "Sep", portfolio: 168000, target: 170000 },
-  { month: "Oct", portfolio: 182000, target: 175000 },
+const timelineData = [
+  { chapter: "Ch 1", events: 12, characters: 4 },
+  { chapter: "Ch 2", events: 13, characters: 5 },
+  { chapter: "Ch 3", events: 14, characters: 5 },
+  { chapter: "Ch 4", events: 14, characters: 6 },
+  { chapter: "Ch 5", events: 15, characters: 6 },
+  { chapter: "Ch 6", events: 14, characters: 7 },
+  { chapter: "Ch 7", events: 16, characters: 7 },
+  { chapter: "Ch 8", events: 17, characters: 8 },
+  { chapter: "Ch 9", events: 16, characters: 8 },
+  { chapter: "Ch 10", events: 0, characters: 0 },
 ];
 
-const performanceData = [
-  { metric: "Revenue Growth", value: 85, fullMark: 100 },
-  { metric: "Cost Efficiency", value: 72, fullMark: 100 },
-  { metric: "Customer Satisfaction", value: 90, fullMark: 100 },
-  { metric: "Market Position", value: 78, fullMark: 100 },
-  { metric: "Innovation", value: 82, fullMark: 100 },
-  { metric: "Team Productivity", value: 88, fullMark: 100 },
+const storyHealthData = [
+  { metric: "Character Consistency", value: 95, fullMark: 100 },
+  { metric: "Timeline Coherence", value: 88, fullMark: 100 },
+  { metric: "Plot Thread Management", value: 92, fullMark: 100 },
+  { metric: "Dialogue Quality", value: 85, fullMark: 100 },
+  { metric: "Pacing", value: 78, fullMark: 100 },
+  { metric: "Continuity Score", value: 91, fullMark: 100 },
 ];
 
-const cashFlowData = [
-  { quarter: "Q1", inflow: 180000, outflow: 120000, net: 60000 },
-  { quarter: "Q2", inflow: 210000, outflow: 135000, net: 75000 },
-  { quarter: "Q3", inflow: 245000, outflow: 155000, net: 90000 },
-  { quarter: "Q4", inflow: 280000, outflow: 170000, net: 110000 },
+const chapterStatsData = [
+  { chapter: "Q1", wordsWritten: 18000, targetWords: 20000, revisions: 6 },
+  { chapter: "Q2", wordsWritten: 21000, targetWords: 20000, revisions: 7 },
+  { chapter: "Q3", wordsWritten: 24500, targetWords: 20000, revisions: 9 },
+  { chapter: "Q4", wordsWritten: 28000, targetWords: 20000, revisions: 11 },
 ];
 
 const CHART_COLORS = {
@@ -169,19 +169,19 @@ export default function Dashboard() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-4xl font-bold text-foreground ivy-font mb-2">
-              Sales Forecasting & CRM Dashboard
+              Story Writing Dashboard
             </h1>
             <p className="text-muted-foreground ivy-font">
-              AI-powered sales predictions and customer segmentation analytics
+              Track your narrative progress, character arcs, and story continuity
             </p>
           </div>
           <div className="flex items-center gap-3">
             <Badge variant="outline" className="px-3 py-1 ivy-font">
-              November 2025
+              Chapter 9 - In Progress
             </Badge>
             <Button className="bg-emerald-500 hover:bg-emerald-600 text-white ivy-font">
-              <Target className="h-4 w-4 mr-2" />
-              Launch Campaign
+              <PenTool className="h-4 w-4 mr-2" />
+              Continue Writing
             </Button>
           </div>
         </div>
@@ -189,31 +189,31 @@ export default function Dashboard() {
         {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
-            title="Forecasted Sales (4 Weeks)"
-            value="$316.8K"
-            change="+18.3%"
-            icon={TrendingUp}
+            title="Total Word Count"
+            value="49,900"
+            change="+15.2%"
+            icon={BookOpen}
             trend="up"
           />
           <StatCard
-            title="Total Customers"
-            value="10,161"
-            change="+5.2%"
+            title="Characters Tracked"
+            value="12"
+            change="+3"
             icon={Users}
             trend="up"
           />
           <StatCard
-            title="Champions Segment"
-            value="2,847"
-            change="+12.8%"
-            icon={Target}
+            title="Active Plot Threads"
+            value="5"
+            change="+1"
+            icon={GitBranch}
             trend="up"
           />
           <StatCard
-            title="Avg Customer Value"
-            value="$4,925"
-            change="+7.4%"
-            icon={DollarSign}
+            title="Continuity Score"
+            value="91%"
+            change="+2.4%"
+            icon={Shield}
             trend="up"
           />
         </div>
@@ -221,12 +221,12 @@ export default function Dashboard() {
         {/* Main Charts */}
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList className="bg-muted/50 backdrop-blur-sm">
-            <TabsTrigger value="overview" className="ivy-font">Sales Forecast</TabsTrigger>
-            <TabsTrigger value="analytics" className="ivy-font">Customer Segments</TabsTrigger>
-            <TabsTrigger value="performance" className="ivy-font">Campaign Performance</TabsTrigger>
-            <TabsTrigger value="cashflow" className="ivy-font">Trend Analysis</TabsTrigger>
-            <TabsTrigger value="investments" className="ivy-font">RFM Insights</TabsTrigger>
-            <TabsTrigger value="transactions" className="ivy-font">Suggested Offers</TabsTrigger>
+            <TabsTrigger value="overview" className="ivy-font">Writing Progress</TabsTrigger>
+            <TabsTrigger value="analytics" className="ivy-font">Character Activity</TabsTrigger>
+            <TabsTrigger value="performance" className="ivy-font">Story Health</TabsTrigger>
+            <TabsTrigger value="cashflow" className="ivy-font">Timeline Events</TabsTrigger>
+            <TabsTrigger value="investments" className="ivy-font">Chapter Stats</TabsTrigger>
+            <TabsTrigger value="transactions" className="ivy-font">Story Elements</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -234,14 +234,14 @@ export default function Dashboard() {
             <div className="grid gap-4 md:grid-cols-7">
               <Card className="col-span-4 border-border/40 backdrop-blur-sm bg-card/50">
                 <CardHeader>
-                  <CardTitle className="ivy-font">4-Week Sales Forecast</CardTitle>
+                  <CardTitle className="ivy-font">Chapter Progress</CardTitle>
                   <CardDescription className="ivy-font">
-                    AI-powered predictions with confidence intervals (Weeks 9-12)
+                    Word count progress across chapters with target completion
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pl-2">
                   <ResponsiveContainer width="100%" height={350}>
-                    <AreaChart data={revenueData}>
+                    <AreaChart data={progressData}>
                       <defs>
                         <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor={chartColors.revenue} stopOpacity={0.3}/>
@@ -254,7 +254,7 @@ export default function Dashboard() {
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#334155" : "#e2e8f0"} />
                       <XAxis 
-                        dataKey="month" 
+                        dataKey="chapter" 
                         stroke={isDarkMode ? "#94a3b8" : "#64748b"}
                         style={{ fontSize: '12px' }}
                       />
@@ -273,22 +273,22 @@ export default function Dashboard() {
                       <Legend />
                       <Area 
                         type="monotone" 
-                        dataKey="actual" 
+                        dataKey="wordCount" 
                         stroke={chartColors.revenue} 
                         fillOpacity={1} 
                         fill="url(#colorActual)"
                         strokeWidth={2}
-                        name="Historical Sales"
+                        name="Word Count"
                       />
                       <Area 
                         type="monotone" 
-                        dataKey="forecast" 
+                        dataKey="targetCount" 
                         stroke={chartColors.profit} 
                         fillOpacity={1} 
                         fill="url(#colorForecast)"
                         strokeWidth={2}
                         strokeDasharray="5 5"
-                        name="Forecasted Sales"
+                        name="Target Count"
                       />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -297,25 +297,25 @@ export default function Dashboard() {
 
               <Card className="col-span-3 border-border/40 backdrop-blur-sm bg-card/50">
                 <CardHeader>
-                  <CardTitle className="ivy-font">Customer Segmentation (RFM)</CardTitle>
+                  <CardTitle className="ivy-font">Character Activity</CardTitle>
                   <CardDescription className="ivy-font">
-                    Distribution by value tier
+                    Distribution by character prominence
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={350}>
                     <PieChart>
                       <Pie
-                        data={customerSegmentData}
+                        data={characterActivityData}
                         cx="50%"
                         cy="50%"
                         labelLine={false}
                         label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                         outerRadius={100}
                         fill="#8884d8"
-                        dataKey="value"
+                        dataKey="appearances"
                       >
-                        {customerSegmentData.map((entry, index) => (
+                        {characterActivityData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                         ))}
                       </Pie>
@@ -329,16 +329,16 @@ export default function Dashboard() {
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="mt-4 space-y-2">
-                    {customerSegmentData.map((seg, idx) => (
-                      <div key={seg.name} className="flex items-center justify-between">
+                    {characterActivityData.map((character, idx) => (
+                      <div key={character.name} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div 
                             className="w-3 h-3 rounded-full" 
                             style={{ backgroundColor: PIE_COLORS[idx] }}
                           />
-                          <span className="text-sm text-muted-foreground ivy-font">{seg.name}</span>
+                          <span className="text-sm text-muted-foreground ivy-font">{character.name}</span>
                         </div>
-                        <span className="text-sm font-medium ivy-font">{seg.count} customers</span>
+                        <span className="text-sm font-medium ivy-font">{character.appearances} appearances</span>
                       </div>
                     ))}
                   </div>
@@ -352,17 +352,17 @@ export default function Dashboard() {
             <div className="grid gap-4 md:grid-cols-2">
               <Card className="border-border/40 backdrop-blur-sm bg-card/50">
                 <CardHeader>
-                  <CardTitle className="ivy-font">Profit Trends</CardTitle>
+                  <CardTitle className="ivy-font">Chapter Trends</CardTitle>
                   <CardDescription className="ivy-font">
-                    Net profit over the last 12 months
+                    Progress across the manuscript
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={revenueData}>
+                    <LineChart data={progressData}>
                       <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#334155" : "#e2e8f0"} />
                       <XAxis 
-                        dataKey="month" 
+                        dataKey="chapter" 
                         stroke={isDarkMode ? "#94a3b8" : "#64748b"}
                         style={{ fontSize: '12px' }}
                       />
@@ -380,7 +380,7 @@ export default function Dashboard() {
                       <Legend />
                       <Line 
                         type="monotone" 
-                        dataKey="profit" 
+                        dataKey="wordCount" 
                         stroke={chartColors.profit} 
                         strokeWidth={3}
                         dot={{ fill: chartColors.profit, r: 5 }}
@@ -393,14 +393,14 @@ export default function Dashboard() {
 
               <Card className="border-border/40 backdrop-blur-sm bg-card/50">
                 <CardHeader>
-                  <CardTitle className="ivy-font">Monthly Comparison</CardTitle>
+                  <CardTitle className="ivy-font">Timeline Events</CardTitle>
                   <CardDescription className="ivy-font">
-                    Revenue, expenses, and profit side by side
+                    Events and characters per chapter
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={revenueData.slice(-6)}>
+                    <BarChart data={timelineData}>
                       <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#334155" : "#e2e8f0"} />
                       <XAxis 
                         dataKey="month" 
@@ -419,9 +419,8 @@ export default function Dashboard() {
                         }}
                       />
                       <Legend />
-                      <Bar dataKey="revenue" fill={chartColors.revenue} radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="expenses" fill={chartColors.expenses} radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="profit" fill={chartColors.profit} radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="events" fill={chartColors.revenue} radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="characters" fill={chartColors.profit} radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -433,14 +432,14 @@ export default function Dashboard() {
           <TabsContent value="performance" className="space-y-4">
             <Card className="border-border/40 backdrop-blur-sm bg-card/50 hover:shadow-lg transition-all duration-300">
               <CardHeader>
-                <CardTitle className="ivy-font">Performance Metrics</CardTitle>
+                <CardTitle className="ivy-font">Story Health Metrics</CardTitle>
                 <CardDescription className="ivy-font">
-                  Comprehensive view of business performance across key areas
+                  Comprehensive view of story quality across key areas
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={400}>
-                  <RadarChart data={performanceData}>
+                  <RadarChart data={storyHealthData}>
                     <PolarGrid stroke={isDarkMode ? "#334155" : "#e2e8f0"} />
                     <PolarAngleAxis 
                       dataKey="metric" 
@@ -454,7 +453,7 @@ export default function Dashboard() {
                       style={{ fontSize: '10px' }}
                     />
                     <Radar 
-                      name="Performance" 
+                      name="Quality" 
                       dataKey="value" 
                       stroke={chartColors.primary} 
                       fill={chartColors.primary} 
@@ -471,7 +470,7 @@ export default function Dashboard() {
                   </RadarChart>
                 </ResponsiveContainer>
                 <div className="mt-6 grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {performanceData.map((item, idx) => (
+                  {storyHealthData.map((item, idx) => (
                     <div key={idx} className="p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-all hover:scale-105 cursor-pointer">
                       <p className="text-sm text-muted-foreground ivy-font mb-1">{item.metric}</p>
                       <div className="flex items-center gap-2">
@@ -489,17 +488,17 @@ export default function Dashboard() {
           <TabsContent value="cashflow" className="space-y-4">
             <Card className="border-border/40 backdrop-blur-sm bg-card/50 hover:shadow-lg transition-all duration-300">
               <CardHeader>
-                <CardTitle className="ivy-font">Quarterly Cash Flow Analysis</CardTitle>
+                <CardTitle className="ivy-font">Writing Activity by Quarter</CardTitle>
                 <CardDescription className="ivy-font">
-                  Track cash inflows, outflows, and net cash position
+                  Track words written, targets, and revision rounds
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={400}>
-                  <ComposedChart data={cashFlowData}>
+                  <ComposedChart data={chapterStatsData}>
                     <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#334155" : "#e2e8f0"} />
                     <XAxis 
-                      dataKey="quarter" 
+                      dataKey="chapter" 
                       stroke={isDarkMode ? "#94a3b8" : "#64748b"}
                       style={{ fontSize: '12px' }}
                     />
@@ -515,14 +514,14 @@ export default function Dashboard() {
                       }}
                     />
                     <Legend />
-                    <Bar dataKey="inflow" fill={chartColors.revenue} radius={[8, 8, 0, 0]} name="Cash Inflow" />
-                    <Bar dataKey="outflow" fill={chartColors.expenses} radius={[8, 8, 0, 0]} name="Cash Outflow" />
+                    <Bar dataKey="wordsWritten" fill={chartColors.revenue} radius={[8, 8, 0, 0]} name="Words Written" />
+                    <Bar dataKey="targetWords" fill={chartColors.expenses} radius={[8, 8, 0, 0]} name="Target Words" />
                     <Line 
                       type="monotone" 
-                      dataKey="net" 
+                      dataKey="revisions" 
                       stroke={chartColors.profit} 
                       strokeWidth={3}
-                      name="Net Cash Flow"
+                      name="Revisions"
                       dot={{ fill: chartColors.profit, r: 6 }}
                     />
                   </ComposedChart>
@@ -553,7 +552,7 @@ export default function Dashboard() {
                   <CardTitle className="text-sm font-medium ivy-font">
                     Portfolio Value
                   </CardTitle>
-                  <Wallet className="h-4 w-4 text-muted-foreground" />
+                  
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold ivy-font">$182,000</div>
@@ -594,14 +593,14 @@ export default function Dashboard() {
 
             <Card className="border-border/40 backdrop-blur-sm bg-card/50">
               <CardHeader>
-                <CardTitle className="ivy-font">Portfolio Performance</CardTitle>
+                <CardTitle className="ivy-font">Chapter Completion Over Time</CardTitle>
                 <CardDescription className="ivy-font">
-                  Your portfolio value vs target over time
+                  Your word count vs target over time
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={350}>
-                  <AreaChart data={investmentData}>
+                  <AreaChart data={progressData}>
                     <defs>
                       <linearGradient id="colorPortfolio" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor={chartColors.portfolio} stopOpacity={0.3}/>
@@ -610,7 +609,7 @@ export default function Dashboard() {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#334155" : "#e2e8f0"} />
                     <XAxis 
-                      dataKey="month" 
+                      dataKey="chapter" 
                       stroke={isDarkMode ? "#94a3b8" : "#64748b"}
                       style={{ fontSize: '12px' }}
                     />
@@ -628,7 +627,7 @@ export default function Dashboard() {
                     <Legend />
                     <Area 
                       type="monotone" 
-                      dataKey="portfolio" 
+                      dataKey="wordCount" 
                       stroke={chartColors.portfolio} 
                       fillOpacity={1} 
                       fill="url(#colorPortfolio)"
@@ -636,7 +635,7 @@ export default function Dashboard() {
                     />
                     <Line 
                       type="monotone" 
-                      dataKey="target" 
+                      dataKey="targetCount" 
                       stroke={chartColors.target} 
                       strokeWidth={2}
                       strokeDasharray="5 5"
@@ -651,47 +650,47 @@ export default function Dashboard() {
           <TabsContent value="transactions" className="space-y-4">
             <Card className="border-border/40 backdrop-blur-sm bg-card/50">
               <CardHeader>
-                <CardTitle className="ivy-font">AI-Recommended Campaign Offers</CardTitle>
+                <CardTitle className="ivy-font">Story Elements Tracker</CardTitle>
                 <CardDescription className="ivy-font">
-                  Targeted offers for each customer segment with expected ROI
+                  Active plot threads, characters, and story elements across chapters
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {suggestedOffersData.map((offer) => (
+                  {storyElementsData.map((element) => (
                     <div
-                      key={offer.id}
+                      key={element.id}
                       className="flex items-center justify-between p-4 rounded-lg border border-border/40 bg-muted/30 hover:bg-muted/50 transition-colors"
                     >
                       <div className="flex items-center gap-4">
                         <div className={`p-2 rounded-full ${
-                          offer.priority === "High" 
+                          element.status === "Active" 
                             ? "bg-emerald-500/10 text-emerald-500" 
-                            : offer.priority === "Medium"
-                            ? "bg-amber-500/10 text-amber-500"
-                            : "bg-blue-500/10 text-blue-500"
+                            : element.status === "Resolved"
+                            ? "bg-blue-500/10 text-blue-500"
+                            : "bg-slate-500/10 text-slate-500"
                         }`}>
-                          {offer.priority === "High" ? (
-                            <Target className="h-4 w-4" />
+                          {element.status === "Active" ? (
+                            <Activity className="h-4 w-4" />
                           ) : (
-                            <Sparkles className="h-4 w-4" />
+                            <Shield className="h-4 w-4" />
                           )}
                         </div>
                         <div>
                           <p className="font-medium text-foreground ivy-font">
-                            {offer.offer}
+                            {element.element}
                           </p>
                           <p className="text-sm text-muted-foreground ivy-font">
-                            {offer.segment} • {offer.priority} Priority
+                            {element.type} • Chapters {element.chapters}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <div className="text-lg font-bold text-emerald-500 ivy-font">
-                          {offer.expectedROI} ROI
+                          {element.status}
                         </div>
                         <Badge variant="outline" className="mt-1">
-                          {offer.segment}
+                          {element.type}
                         </Badge>
                       </div>
                     </div>
@@ -708,11 +707,11 @@ export default function Dashboard() {
             <CardHeader>
               <div className="flex items-center gap-3">
                 <div className="p-3 rounded-full bg-emerald-500/10 text-emerald-500 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
-                  <TrendingUp className="h-5 w-5" />
+                  <Brain className="h-5 w-5" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg ivy-font">Refresh Forecast</CardTitle>
-                  <CardDescription className="ivy-font">Update AI predictions</CardDescription>
+                  <CardTitle className="text-lg ivy-font">Check Continuity</CardTitle>
+                  <CardDescription className="ivy-font">Run consistency check</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -725,8 +724,8 @@ export default function Dashboard() {
                   <Sparkles className="h-5 w-5" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg ivy-font">Run Segmentation</CardTitle>
-                  <CardDescription className="ivy-font">Update RFM analysis</CardDescription>
+                  <CardTitle className="text-lg ivy-font">Get Suggestions</CardTitle>
+                  <CardDescription className="ivy-font">AI creative ideas</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -736,11 +735,11 @@ export default function Dashboard() {
             <CardHeader>
               <div className="flex items-center gap-3">
                 <div className="p-3 rounded-full bg-blue-500/10 text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                  <Target className="h-5 w-5" />
+                  <PenTool className="h-5 w-5" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg ivy-font">Launch Campaign</CardTitle>
-                  <CardDescription className="ivy-font">Execute AI workflow</CardDescription>
+                  <CardTitle className="text-lg ivy-font">Start Writing</CardTitle>
+                  <CardDescription className="ivy-font">Continue your story</CardDescription>
                 </div>
               </div>
             </CardHeader>

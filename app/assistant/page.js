@@ -13,18 +13,18 @@ import {
 } from "lucide-react";
 
 const SUGGESTED_PROMPTS = [
-  "Generate 4-week sales forecast for electronics category",
-  "Identify top 100 customers for VIP campaign",
-  "Execute win-back campaign for at-risk segment",
-  "Analyze customer churn patterns and suggest retention offers",
-  "Create personalized email campaign for new customers"
+  "Help me track character arcs across my screenplay",
+  "Check for timeline inconsistencies in chapters 1-5",
+  "Summarize Sarah's character development",
+  "Find all scenes where Marcus and Elena interact",
+  "Suggest plot ideas to resolve the mystery thread"
 ];
 
 const DUMMY_MESSAGES = [
   {
     id: 1,
     role: "assistant",
-    content: "Hello! I'm ScriptForgeAI AI, your agentic campaign workflow executor. I can run sales forecasts, segment customers using RFM analysis, design targeted campaigns, and execute multi-step marketing workflows autonomously. What would you like me to do?",
+    content: "Hello! I'm ScriptForge AI, your intelligent writing assistant. I can help you maintain narrative continuity, track characters and timelines, detect inconsistencies, and provide creative suggestions for your screenplay or story. What would you like me to help with?",
     timestamp: "07:21 PM"
   }
 ];
@@ -61,7 +61,7 @@ export default function Assistant() {
       const aiMessage = {
         id: messages.length + 2,
         role: "assistant",
-        content: "Analyzing historical transaction data... ✓\n\nForecast Model Training: 94% complete\nCustomer Segmentation: RFM analysis done\nCampaign Workflow: Ready to execute\n\nI've identified 2,847 Champions segment customers with avg spend $8,500. Suggested offer: VIP Loyalty Program with 25% discount. Expected ROI: +340%. Shall I launch the campaign?",
+        content: "Analyzing your manuscript... ✓\n\nStory Context: Loaded 15 chapters\nCharacter Tracking: 12 main characters identified\nTimeline Validation: No inconsistencies found\nPlot Threads: 5 active, 2 resolved\n\nI've mapped Sarah's character arc from Chapter 1-15. Her transformation from skeptic to believer is well-paced. Suggested enhancement: Add a scene in Chapter 10 showing her internal conflict. Shall I provide detailed suggestions?",
         timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
       };
       setMessages(prev => [...prev, aiMessage]);
@@ -103,12 +103,12 @@ export default function Assistant() {
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-foreground ivy-font">ScriptForgeAI AI</h1>
-              <p className="text-sm text-emerald-500 ivy-font">Agentic Campaign Workflow Executor</p>
+              <h1 className="text-3xl font-bold text-foreground ivy-font">ScriptForge AI</h1>
+              <p className="text-sm text-emerald-500 ivy-font">Smart Script Writing Assistant</p>
             </div>
           </div>
           <p className="text-muted-foreground ivy-font max-w-2xl mx-auto">
-            Execute autonomous marketing campaigns with AI-powered sales forecasting and RFM customer segmentation
+            Intelligent writing assistant with comprehensive story awareness and narrative continuity tracking
           </p>
         </div>
 
@@ -206,7 +206,7 @@ export default function Assistant() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Execute a campaign workflow, forecast sales trends, or segment customers..."
+                    placeholder="Ask about your story, check character consistency, or get creative suggestions..."
                     className="resize-none min-h-[60px] max-h-[120px] pr-12 ivy-font bg-background/80 border-border/60 focus:border-emerald-500/50 focus:ring-emerald-500/20 transition-all"
                     rows={1}
                   />

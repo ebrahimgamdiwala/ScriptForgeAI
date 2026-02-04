@@ -20,7 +20,7 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md">
-              AI-Powered Sales Forecasting & CRM. Predict sales trends, segment customers, and automate campaigns with our intelligent analytics platform.
+              Smart Script Writing Assistant. Maintain perfect narrative continuity, track characters and timelines, and get intelligent creative suggestions for your screenplays and stories.
             </p>
           </div>
 

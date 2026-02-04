@@ -114,12 +114,8 @@ export default function LoginPage() {
         
         // Small delay for better UX
         setTimeout(() => {
-          // For new signups, redirect to KYC onboarding page
-          if (!isLogin) {
-            router.push("/onboarding");
-          } else {
-            router.push("/dashboard");
-          }
+          // Redirect all users to dashboard
+          router.push("/dashboard");
           router.refresh();
         }, 500);
       }
@@ -137,7 +133,7 @@ export default function LoginPage() {
     try {
       // Pass a custom callbackUrl that we'll handle in the callback
       await signIn("google", { 
-        callbackUrl: "/onboarding" // Default to onboarding, will be redirected if KYC complete
+        callbackUrl: "/dashboard" // Default to onboarding, will be redirected if KYC complete
       });
     } catch (err) {
       console.error("Google auth error:", err);
@@ -199,25 +195,25 @@ export default function LoginPage() {
         <div className="hidden md:block space-y-6">
           <div className="space-y-4">
             <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20">
-              AI-Powered Retail Analytics
+              Smart Script Writing Assistant
             </Badge>
             <h1 className="text-5xl font-bold text-foreground ivy-font">
               Welcome to
               <span className="block mt-2 bg-linear-to-r from-emerald-500 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
-                ScriptForgeAI
+                ScriptForge
               </span>
             </h1>
             <p className="text-lg text-muted-foreground ivy-font max-w-md">
-              Secure access to AI-powered sales forecasting, RFM customer segmentation, and autonomous campaign workflows.
+              Your intelligent writing companion for maintaining perfect narrative continuity across screenplays and long-form stories.
             </p>
           </div>
 
           {/* Feature Cards */}
           <div className="space-y-3 mt-8">
             {[
-              { icon: TrendingUp, title: "Sales Forecasting", desc: "4-week predictions with 92% accuracy" },
-              { icon: Shield, title: "Authorized Access Only", desc: "Protect sensitive sales and customer data" },
-              { icon: Sparkles, title: "Agentic Workflows", desc: "Autonomous campaign execution" }
+              { icon: TrendingUp, title: "Story Intelligence", desc: "Track characters, timelines, and plot threads" },
+              { icon: Shield, title: "Continuity Protection", desc: "Detect inconsistencies before they become problems" },
+              { icon: Sparkles, title: "AI Creative Support", desc: "Intelligent suggestions that match your style" }
             ].map((feature, idx) => (
               <div 
                 key={idx}
@@ -248,8 +244,8 @@ export default function LoginPage() {
             </CardTitle>
             <CardDescription className="ivy-font">
               {isLogin 
-                ? "Secure authentication required to access CRM and forecasting dashboard" 
-                : "Create an account to access AI-powered retail analytics"}
+                ? "Sign in to access your writing projects and story analytics" 
+                : "Create an account to start writing with AI assistance"}
             </CardDescription>
           </CardHeader>
           <CardContent>

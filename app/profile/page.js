@@ -195,10 +195,10 @@ export default function ProfilePage() {
             ) : (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground ivy-font">
-                  Complete your business profile to unlock full access to ScriptForgeAI features including sales forecasting, customer segmentation, and AI-powered campaigns.
+                  Complete your writer profile to unlock full access to ScriptForge features including story analytics, character tracking, and AI-powered creative assistance.
                 </p>
                 <Button
-                  onClick={() => router.push("/onboarding")}
+                  onClick={() => router.push("/dashboard")}
                   className="bg-emerald-500 hover:bg-emerald-600 text-white ivy-font"
                 >
                   Complete KYC Verification

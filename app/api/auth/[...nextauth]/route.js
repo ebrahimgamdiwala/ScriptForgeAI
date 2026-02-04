@@ -50,7 +50,7 @@ export const authOptions = {
               password,
               name: name.trim(),
               authProvider: 'credentials',
-              hasCompletedKYC: false
+              hasCompletedKYC: true
             });
 
             return {
@@ -126,7 +126,7 @@ export const authOptions = {
               image: user.image,
               googleId: profile.sub,
               authProvider: 'google',
-              hasCompletedKYC: false
+              hasCompletedKYC: true
             });
           } else {
             // Check if user signed up with credentials
