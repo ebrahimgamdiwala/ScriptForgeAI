@@ -397,6 +397,7 @@ export default function AIEditorPage({
   const [versions, setVersions] = useState([]);
   const [versionMessage, setVersionMessage] = useState('');
   const [isSavingVersion, setIsSavingVersion] = useState(false);
+  const [confirmRestoreId, setConfirmRestoreId] = useState(null); // ID of version pending restore confirmation
 
   const chatEndRef = useRef(null);
   const editorScrollRef = useRef(null);
@@ -450,12 +451,48 @@ export default function AIEditorPage({
   };
 
   const handleRestoreVersion = (version, e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    if (!confirm('Are you sure you want to restore this version? Current changes will be lost unless saved.')) return;
-    setScriptContent(version.content);
-    if (version.acceptedChanges) setAcceptedChanges(version.acceptedChanges);
-    if (version.rejectedChanges) setRejectedChanges(version.rejectedChanges);
-    toast.success(`Restored version from ${new Date(version.createdAt).toLocaleString()}`);
+    // Aggressively prevent default behavior
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.nativeEvent?.stopImmediatePropagation();
+    }
+
+    // Step 1: Request confirmation if not already confirming this version
+    if (confirmRestoreId !== version._id) {
+        setConfirmRestoreId(version._id);
+        // Auto-clear confirmation after 3 seconds
+        setTimeout(() => setConfirmRestoreId(null), 3000);
+        return false;
+    }
+
+    // Step 2: Actually restore
+    try {
+        // Ensure content is a string to prevent parser crashes
+        const contentToRestore = typeof version.content === 'string' ? version.content : String(version.content || '');
+        
+        setScriptContent(contentToRestore);
+        
+        if (version.acceptedChanges && Array.isArray(version.acceptedChanges)) {
+            setAcceptedChanges(version.acceptedChanges);
+        } else {
+            setAcceptedChanges([]);
+        }
+        
+        if (version.rejectedChanges && Array.isArray(version.rejectedChanges)) {
+            setRejectedChanges(version.rejectedChanges);
+        } else {
+            setRejectedChanges([]);
+        }
+        
+        setConfirmRestoreId(null);
+        toast.success(`Restored version from ${new Date(version.createdAt).toLocaleString()}`);
+    } catch (err) {
+        console.error("Error restoring version:", err);
+        toast.error("Failed to restore version");
+    }
+    
+    return false;
   };
 
   // Fetch versions on load
@@ -1168,7 +1205,7 @@ export default function AIEditorPage({
                   placeholder="Commit message..."
                   className="h-16 text-xs resize-none mb-1"
                />
-               <Button size="sm" className="w-full h-7 text-xs gap-2" onClick={handleSaveVersion} disabled={isSavingVersion}>
+               <Button type="button" size="sm" className="w-full h-7 text-xs gap-2" onClick={handleSaveVersion} disabled={isSavingVersion}>
                   <Save className="w-3.5 h-3.5" />
                   {isSavingVersion ? 'Saving...' : 'Save Version'}
                </Button>
@@ -1195,13 +1232,12 @@ export default function AIEditorPage({
                               </span>
                               <Button
                                 type="button"
-                                variant="ghost"
+                                variant={confirmRestoreId === version._id ? "destructive" : "ghost"}
                                 size="sm"
-                                className="h-5 px-1.5 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-900/40 dark:hover:text-blue-400"
-                                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }} // Prevent focus/selection issues
+                                className={`h-5 px-1.5 text-[10px] transition-opacity ${confirmRestoreId === version._id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
                                 onClick={(e) => handleRestoreVersion(version, e)}
                               >
-                                Restore
+                                {confirmRestoreId === version._id ? "Confirm?" : "Restore"}
                               </Button>
                            </div>
                         </div>

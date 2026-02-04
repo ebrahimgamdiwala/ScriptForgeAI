@@ -946,7 +946,7 @@ export default function WorkflowCanvas({
             ) : (
               <>
                 <Play className="w-4 h-4 mr-2" />
-                Run Campaign
+                Run Workflow
               </>
             )}
           </Button>
