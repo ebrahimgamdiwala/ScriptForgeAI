@@ -432,7 +432,9 @@ export default function AIEditorPage({
           message: versionMessage || 'Manual checkpoint',
           stats: {
              totalLines: scriptContent.split('\n').length
-          }
+          },
+          acceptedChanges,
+          rejectedChanges
         })
       });
       if (!res.ok) throw new Error('Save failed');
@@ -451,6 +453,8 @@ export default function AIEditorPage({
     if (e && e.preventDefault) e.preventDefault();
     if (!confirm('Are you sure you want to restore this version? Current changes will be lost unless saved.')) return;
     setScriptContent(version.content);
+    if (version.acceptedChanges) setAcceptedChanges(version.acceptedChanges);
+    if (version.rejectedChanges) setRejectedChanges(version.rejectedChanges);
     toast.success(`Restored version from ${new Date(version.createdAt).toLocaleString()}`);
   };
 
@@ -640,18 +644,23 @@ export default function AIEditorPage({
 
   // Initialize script content once, preferring latest version if available
   useEffect(() => {
-    // Only run if we don't have content yet
-    if (!scriptContent) {
-        // If versions are loaded, use the latest one
-        if (versions.length > 0) {
-            setScriptContent(versions[0].content);
-            // Optional: Notify user
-            // toast.success("Loaded latest saved version");
-        } 
-        // Fallback to brief if no versions exist
-        else if (workflow?.brief) {
-            setScriptContent(workflow.brief);
+    // If we have versions, try to use the latest one
+    if (versions.length > 0) {
+        // If content is empty OR matches the raw brief (meaning it hasn't been edited manually yet),
+        // we upgrade it to the latest version history.
+        // We compare trimmed values to avoid whitespace issues.
+        if (!scriptContent || (workflow?.brief && scriptContent.trim() === workflow.brief.trim())) {
+             if (versions[0].content !== scriptContent) {
+                setScriptContent(versions[0].content);
+                if (versions[0].acceptedChanges) setAcceptedChanges(versions[0].acceptedChanges);
+                if (versions[0].rejectedChanges) setRejectedChanges(versions[0].rejectedChanges);
+                // toast("Loaded latest saved version from history", { icon: '🕒' });
+             }
         }
+    } 
+    // Otherwise fallback to brief if nothing else exists
+    else if (workflow?.brief && !scriptContent) {
+        setScriptContent(workflow.brief);
     }
   }, [workflow, versions, scriptContent]);
 
@@ -799,12 +808,13 @@ export default function AIEditorPage({
     setResolvedProblems(prev => new Set([...prev, problem.id]));
 
     // Track accepted changes
-    setAcceptedChanges(prev => [...prev, {
+    const newChangeRecord = {
       id: problem.id,
       original: problem.originalText,
       applied: fixToApply,
       timestamp: new Date()
-    }]);
+    };
+    setAcceptedChanges(prev => [...prev, newChangeRecord]);
 
     // Update pending changes in document
     setPendingChangesInDoc(prev => {
@@ -843,6 +853,7 @@ export default function AIEditorPage({
         return line;
     });
     const autoSaveContent = autoSaveUpdatedLines.map(l => l.content).join('\n');
+    const autoSaveAcceptedChanges = [...acceptedChanges, newChangeRecord];
 
     setTimeout(() => {
         if (autoSaveContent && workflow?.id) {
@@ -854,7 +865,9 @@ export default function AIEditorPage({
                   workflowId: wfId,
                   content: autoSaveContent,
                   message: `Auto-save: Accepted fix for "${problem.title}"`,
-                  stats: { totalLines: autoSaveContent.split('\n').length }
+                  stats: { totalLines: autoSaveContent.split('\n').length },
+                  acceptedChanges: autoSaveAcceptedChanges,
+                  rejectedChanges: rejectedChanges
                 })
              }).then(() => {
                  fetchVersions(); // Refresh history list
@@ -1181,15 +1194,12 @@ export default function AIEditorPage({
                                  {new Date(version.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                               </span>
                               <Button
-                                type="button" 
+                                type="button"
                                 variant="ghost"
                                 size="sm"
                                 className="h-5 px-1.5 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-900/40 dark:hover:text-blue-400"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    handleRestoreVersion(version, e);
-                                }}
+                                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }} // Prevent focus/selection issues
+                                onClick={(e) => handleRestoreVersion(version, e)}
                               >
                                 Restore
                               </Button>

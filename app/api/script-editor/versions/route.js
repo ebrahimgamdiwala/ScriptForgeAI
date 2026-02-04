@@ -39,7 +39,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { workflowId, content, message, stats } = await request.json();
+    const { workflowId, content, message, stats, acceptedChanges, rejectedChanges } = await request.json();
 
     if (!workflowId || !content) {
       return NextResponse.json({ error: 'Workflow ID and content are required' }, { status: 400 });
@@ -52,7 +52,9 @@ export async function POST(request) {
       userId: session.user.id, // Assuming session.user.id is populated
       content,
       message: message || 'Manual save',
-      stats: stats || { totalLines: content.split('\n').length }
+      stats: stats || { totalLines: content.split('\n').length },
+      acceptedChanges: acceptedChanges || [],
+      rejectedChanges: rejectedChanges || []
     });
 
     return NextResponse.json({ success: true, version: newVersion });
