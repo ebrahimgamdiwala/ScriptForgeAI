@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth-options';
 import dbConnect from '@/lib/mongodb';
 import GeneratedVideo from '@/lib/models/GeneratedVideo';
 import ScriptWorkflow from '@/lib/models/ScriptWorkflow';
+import { readdir, stat } from 'fs/promises';
+import path from 'path';
 
 /**
  * GET - Fetch generated videos for a workflow/agent
@@ -67,6 +69,68 @@ export async function GET(request) {
         generatedAt: video.generatedAt
       };
     });
+
+    // Also check for any orphan videos in the filesystem that match this workflow
+    // This handles videos that were generated but not saved to DB properly
+    if (agentType) {
+      try {
+        const videosDir = path.join(process.cwd(), 'public', 'generated-videos');
+        const files = await readdir(videosDir).catch(() => []);
+        
+        // Look for any video files that might match this workflow
+        // Video files are named like: {projectName}_{sceneName}_{promptIndex}_{timestamp}.mp4
+        for (const file of files) {
+          if (!file.endsWith('.mp4')) continue;
+          
+          const localPath = `/generated-videos/${file}`;
+          
+          // Check if this video is already in our map
+          let alreadyIncluded = false;
+          if (videoMap[agentType]) {
+            alreadyIncluded = Object.values(videoMap[agentType].videos).includes(localPath);
+          }
+          
+          if (!alreadyIncluded) {
+            // Try to determine the prompt index from filename
+            // Format: draft_scene_name_0_1234567890.mp4
+            const parts = file.replace('.mp4', '').split('_');
+            const possibleIndex = parts.length > 2 ? parseInt(parts[parts.length - 2]) : 0;
+            const promptKey = `prompt_${isNaN(possibleIndex) ? 0 : possibleIndex}`;
+            
+            // Check if there's already a video for this promptKey
+            if (!videoMap[agentType]?.videos?.[promptKey]) {
+              // This might be an orphan video - get file stats to check recency
+              const filePath = path.join(videosDir, file);
+              const fileStat = await stat(filePath).catch(() => null);
+              
+              if (fileStat) {
+                // If the file was created in the last 24 hours, include it
+                const ageMs = Date.now() - fileStat.mtime.getTime();
+                const maxAgeMs = 24 * 60 * 60 * 1000; // 24 hours
+                
+                if (ageMs < maxAgeMs) {
+                  if (!videoMap[agentType]) {
+                    videoMap[agentType] = { videos: {}, statuses: {} };
+                  }
+                  
+                  videoMap[agentType].videos[promptKey] = localPath;
+                  videoMap[agentType].statuses[promptKey] = {
+                    status: 'completed',
+                    message: 'Video ready (recovered from filesystem)',
+                    generatedAt: fileStat.mtime
+                  };
+                  
+                  console.log(`Recovered orphan video: ${localPath} as ${promptKey}`);
+                }
+              }
+            }
+          }
+        }
+      } catch (fsError) {
+        console.error('Error scanning for orphan videos:', fsError);
+        // Continue with DB results only
+      }
+    }
 
     return NextResponse.json({
       success: true,

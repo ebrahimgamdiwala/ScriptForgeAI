@@ -514,6 +514,33 @@ export async function GET(request) {
                   });
                   console.log('📝 Saved new video to database');
                 }
+
+                // Also update the workflow node's result with the video URL so it persists
+                // This ensures the video displays even after page refresh
+                if (storedOp.workflowId && storedOp.agentId) {
+                  try {
+                    const workflow = await ScriptWorkflow.findById(storedOp.workflowId);
+                    if (workflow && workflow.nodes) {
+                      const nodeIndex = workflow.nodes.findIndex(n => 
+                        n.id === storedOp.agentId || 
+                        n.data?.agentType === storedOp.agentType
+                      );
+                      
+                      if (nodeIndex !== -1) {
+                        // Initialize generatedVideos if it doesn't exist
+                        if (!workflow.nodes[nodeIndex].data.generatedVideos) {
+                          workflow.nodes[nodeIndex].data.generatedVideos = {};
+                        }
+                        // Store the video path in the node's data
+                        workflow.nodes[nodeIndex].data.generatedVideos[storedOp.promptKey] = videoUrl;
+                        await workflow.save();
+                        console.log('📝 Updated workflow node with video URL');
+                      }
+                    }
+                  } catch (workflowError) {
+                    console.error('⚠️ Failed to update workflow node:', workflowError);
+                  }
+                }
               } catch (dbError) {
                 console.error('⚠️ Failed to save video to database:', dbError);
                 // Continue anyway - video is still saved to disk

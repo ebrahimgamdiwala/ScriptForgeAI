@@ -35,11 +35,46 @@ export default function AgentDetailModal({ agent, isOpen, onClose, onRunAgent })
     };
   }, [agent]);
 
-  // Load video data from database
+  // Load video data from node data AND database
   const loadVideoData = useCallback(async () => {
     const info = getWorkflowInfo();
+    
+    // First, check if videos are stored directly in the node data
+    // This is the fastest path - no API call needed
+    if (agent?.data?.generatedVideos && Object.keys(agent.data.generatedVideos).length > 0) {
+      console.log('Found videos in node data:', agent.data.generatedVideos);
+      setGeneratedVideos(prev => ({
+        ...prev,
+        ...agent.data.generatedVideos
+      }));
+      // Set statuses for these videos
+      const statuses = {};
+      Object.keys(agent.data.generatedVideos).forEach(key => {
+        statuses[key] = { status: 'completed', message: 'Video ready' };
+      });
+      setVideoGenerations(prev => ({ ...prev, ...statuses }));
+    }
+    
+    // Also check the result's visualPrompts for any stored video URLs
+    if (agent?.data?.result?.visualPrompts) {
+      const resultVideos = {};
+      agent.data.result.visualPrompts.forEach((prompt, index) => {
+        if (prompt.videoUrl) {
+          resultVideos[`prompt_${index}`] = prompt.videoUrl;
+        }
+      });
+      if (Object.keys(resultVideos).length > 0) {
+        console.log('Found videos in result visualPrompts:', resultVideos);
+        setGeneratedVideos(prev => ({
+          ...prev,
+          ...resultVideos
+        }));
+      }
+    }
+    
+    // Then also fetch from database for any additional videos
     if (!info?.workflowId) {
-      console.log('No workflowId available, skipping video load');
+      console.log('No workflowId available, skipping database video load');
       return;
     }
     
@@ -61,17 +96,23 @@ export default function AgentDetailModal({ agent, isOpen, onClose, onRunAgent })
       
       if (data.success && data.videos?.[info.agentType]) {
         const agentVideos = data.videos[info.agentType];
-        setGeneratedVideos(agentVideos.videos || {});
-        setVideoGenerations(agentVideos.statuses || {});
-        console.log('Set videos:', agentVideos.videos);
-        console.log('Set statuses:', agentVideos.statuses);
+        // Merge with any already loaded videos (node data takes precedence)
+        setGeneratedVideos(prev => ({
+          ...agentVideos.videos,
+          ...prev // Keep any videos we already found
+        }));
+        setVideoGenerations(prev => ({
+          ...agentVideos.statuses,
+          ...prev // Keep any statuses we already have
+        }));
+        console.log('Merged DB videos with existing');
       }
     } catch (error) {
       console.error('Failed to load video data from database:', error);
     } finally {
       setIsLoadingVideos(false);
     }
-  }, [getWorkflowInfo]);
+  }, [getWorkflowInfo, agent]);
 
   // Load data when component mounts or agent changes
   useEffect(() => {
