@@ -649,15 +649,6 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ---
 
-## 📞 Contact & Support
-
-- 📧 **Email**: support@scriptforge.ai
-- 💬 **Discord**: [Join our community](https://discord.gg/scriptforge)
-- 🐦 **Twitter**: [@ScriptForgeAI](https://twitter.com/scriptforgeai)
-- 📺 **YouTube**: [Video tutorials](https://youtube.com/@scriptforgeai)
-
----
-
 ## 🗺️ Roadmap
 
 - [ ] **Q1 2026** - Real-time collaboration in FORGER Editor
