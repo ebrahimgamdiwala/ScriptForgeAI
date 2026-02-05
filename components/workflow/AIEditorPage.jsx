@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   X, ChevronDown, ChevronUp, ChevronRight, ChevronLeft,
@@ -14,9 +15,13 @@ import {
   PanelRightClose, PanelRight, RefreshCw, Copy, ArrowLeft,
   Database, Network, Link2, Users, MapPin, Minus, Plus,
   MessageSquare, Eye, EyeOff, Undo2, Redo2, Bold, Italic,
-  History, GitBranch, Save
+  History, GitBranch, Save, Share2, MousePointer2, Focus, AlignJustify
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { io } from "socket.io-client";
+import { nanoid } from 'nanoid';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch"; 
 
 // Custom scrollbar and Word document styles
 const scrollbarStyles = `
@@ -33,6 +38,30 @@ const scrollbarStyles = `
   }
   .ai-editor-scroll::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  /* Remote Cursor Styles */
+  .remote-cursor-flag {
+    position: absolute;
+    top: -16px;
+    left: 0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    color: white;
+    font-weight: bold;
+    white-space: nowrap;
+    z-index: 20;
+    pointer-events: none;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  }
+  .remote-cursor-caret {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    z-index: 20;
+    pointer-events: none;
   }
 
   /* Word Document Style */
@@ -255,6 +284,111 @@ export default function AIEditorPage({
   const [isEditing, setIsEditing] = useState(false);
   const [showIssueHighlights, setShowIssueHighlights] = useState(true);
   
+  // Real-time Collaboration State
+  const [socket, setSocket] = useState(null);
+  const [collaborators, setCollaborators] = useState({}); // { [userId]: { name, color, line, timestamp } }
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
+  
+  // Focus / Zen Mode
+  const [isFocusMode, setIsFocusMode] = useState(false);
+
+  // Toggle Focus Mode
+  const toggleFocusMode = useCallback((enabled) => {
+      setIsFocusMode(enabled);
+      if (enabled) {
+          setIsBottomPanelOpen(false);
+          setIsRightPanelOpen(false);
+          setIsReferencePanelOpen(false);
+          setIsVersionPanelOpen(false);
+          setShowIssueHighlights(false);
+          toast("Focus Mode On", { icon: "🧘" });
+      } else {
+          // Restore default state? Or just let user open what they need
+          // Optionally restore some:
+          setIsBottomPanelOpen(true); 
+          setIsRightPanelOpen(true);
+          setShowIssueHighlights(true);
+          toast("Focus Mode Off", { icon: "⚡" });
+      }
+  }, []);
+  
+  const currentUser = useMemo(() => {
+    // Persist identity for session
+    if (typeof window !== 'undefined') {
+        // Set basic share URL immediately on client side (fallback if socket fails)
+        if (!shareUrl) {
+            const docId = workflow?.id || workflow?._id || 'demo-doc';
+            setShareUrl(`${window.location.origin}/workflows/${docId}?share=true`);
+        }
+
+        const stored = localStorage.getItem('sf_user_identity');
+        if (stored) return JSON.parse(stored);
+        
+        const colors = ['#ef4444', '#f97316', '#f59e0b', '#10b981', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
+        const randomColor = colors[Math.floor(Math.random() * colors.length)];
+        const identity = {
+            id: nanoid(),
+            name: `Writer ${Math.floor(Math.random() * 1000)}`,
+            color: randomColor
+        };
+        localStorage.setItem('sf_user_identity', JSON.stringify(identity));
+        return identity;
+    }
+    return { id: 'anon', name: 'Anonymous', color: '#333' };
+  }, []);
+
+  // Initialize Socket.io
+  useEffect(() => {
+      // Create socket connection
+      const socketInstance = io({
+          path: '/api/socket/io',
+          addTrailingSlash: false,
+      });
+
+      socketInstance.on('connect', () => {
+          console.log("Socket connected:", socketInstance.id);
+          const docId = workflow?.id || workflow?._id || 'demo-doc';
+          setShareUrl(`${window.location.origin}/workflows/${docId}?share=true`);
+          socketInstance.emit('join-document', docId, currentUser);
+      });
+
+      socketInstance.on('connect_error', (err) => {
+          console.warn("Socket connection failed (likely dev mode):", err.message);
+          // Don't clear shareUrl, keep fallback
+      });
+
+      socketInstance.on('user-joined', (user) => {
+          toast.success(`${user.name} joined the session`, { icon: '👋' });
+      });
+
+      socketInstance.on('cursor-update', (data) => {
+          // data: { userId, userName, color, line, offset }
+          setCollaborators(prev => ({
+              ...prev,
+              [data.userId]: { ...data, lastActive: Date.now() }
+          }));
+      });
+
+      socketInstance.on('receive-changes', (data) => {
+          // data: { lineId, content, senderId }
+          if (data.senderId === currentUser.id) return;
+
+          setScriptLines(prev => prev.map(line => {
+             if (line.number === data.lineId) {
+                 return { ...line, content: data.content };
+             }
+             return line;
+          }));
+      });
+
+      setSocket(socketInstance);
+
+      return () => {
+          socketInstance.disconnect();
+      };
+  }, [workflow, currentUser]);
+
   // Resizing Refs
   const isDraggingBottom = useRef(false);
   const isDraggingRight = useRef(false);
@@ -1615,30 +1749,89 @@ export default function AIEditorPage({
               <div className="h-12 border-b border-border bg-muted/30 flex items-center px-4 gap-3">
                 <FileText className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm font-medium">{workflow?.name || 'Untitled Script'}</span>
+                {isFocusMode && <Badge variant="secondary" className="text-[10px] bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20 gap-1"><Focus className="w-3 h-3"/> Zen Mode</Badge>}
                 <div className="h-5 w-px bg-border mx-2" />
                 
-                {/* Edit indicator */}
-                {isEditing && (
-                  <Badge className="bg-blue-500/20 text-blue-500 border-0 text-[10px]">
-                    <Pencil className="w-3 h-3 mr-1" />
-                    Editing
-                  </Badge>
-                )}
+                {/* Focus Mode Toggle */}
+                <div className="flex items-center gap-2 mr-2">
+                    <Switch 
+                        id="focus-mode" 
+                        checked={isFocusMode}
+                        onCheckedChange={toggleFocusMode}
+                    />
+                    <label htmlFor="focus-mode" className="text-xs font-medium text-muted-foreground cursor-pointer select-none">
+                        Focus Mode
+                    </label>
+                </div>
+
+                {!isFocusMode && (
+                    <>
+                    <div className="h-5 w-px bg-border mx-2" />
                 
-                {/* Issue Highlights Toggle */}
+                    {/* Edit indicator */}
+                    {isEditing && (
+                    <Badge className="bg-blue-500/20 text-blue-500 border-0 text-[10px]">
+                        <Pencil className="w-3 h-3 mr-1" />
+                        Editing
+                    </Badge>
+                    )}
+                    
+                    {/* Issue Highlights Toggle */}
+                    <Button
+                    variant={showIssueHighlights ? "default" : "ghost"}
+                    size="sm"
+                    className={`h-7 text-xs gap-1.5 ${showIssueHighlights ? 'bg-amber-500/20 text-amber-500 hover:bg-amber-500/30' : ''}`}
+                    onClick={() => setShowIssueHighlights(!showIssueHighlights)}
+                    >
+                    {showIssueHighlights ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                    {showIssueHighlights ? 'Issues Visible' : 'Issues Hidden'}
+                    </Button>
+                    </>
+                )}
+
+                {/* Share Button (Google Docs Style) */}
                 <Button
-                  variant={showIssueHighlights ? "default" : "ghost"}
+                  variant="outline"
                   size="sm"
-                  className={`h-7 text-xs gap-1.5 ${showIssueHighlights ? 'bg-amber-500/20 text-amber-500 hover:bg-amber-500/30' : ''}`}
-                  onClick={() => setShowIssueHighlights(!showIssueHighlights)}
+                  className="h-7 text-xs gap-1.5 ml-2 bg-blue-500/10 text-blue-600 border-blue-200 hover:bg-blue-500/20"
+                  onClick={() => setIsShareDialogOpen(true)}
                 >
-                  {showIssueHighlights ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                  {showIssueHighlights ? 'Issues Visible' : 'Issues Hidden'}
+                  <Share2 className="w-3.5 h-3.5" />
+                  Share
                 </Button>
+                
+                {/* Active Collaborators */}
+                <div className="flex items-center ml-4">
+                     <div className="flex -space-x-1.5">
+                        {/* Current User */}
+                        <div 
+                            className="w-6 h-6 rounded-full border-2 border-background flex items-center justify-center text-[10px] text-white font-bold z-10"
+                            style={{ backgroundColor: currentUser.color }}
+                            title={`${currentUser.name} (You)`}
+                         >
+                            {currentUser.name[0]}
+                         </div>
+                         {/* Other Users */}
+                         {Object.values(collaborators).map(c => (
+                             <div 
+                                key={c.userId} 
+                                className="w-6 h-6 rounded-full border-2 border-background flex items-center justify-center text-[10px] text-white font-bold"
+                                style={{ backgroundColor: c.color }}
+                                title={c.userName}
+                             >
+                                {c.userName[0]}
+                             </div>
+                         ))}
+                     </div>
+                     {Object.keys(collaborators).length > 0 && (
+                         <span className="ml-2 text-[10px] text-muted-foreground">{Object.keys(collaborators).length} online</span>
+                     )}
+                </div>
 
                 <div className="flex-1" />
                 
                 {/* Stats */}
+                {!isFocusMode && (
                 <div className="flex items-center gap-3 text-xs">
                   {pendingProblems.length > 0 && (
                     <Badge className="bg-amber-500/20 text-amber-500 border-0">
@@ -1656,6 +1849,7 @@ export default function AIEditorPage({
                     </Badge>
                   )}
                 </div>
+                )}
               </div>
 
               {/* Word Document Style Editor */}
@@ -1664,6 +1858,7 @@ export default function AIEditorPage({
                   {/* Script Content */}
                   {scriptLines.map((line, idx) => {
                     const isSelected = selectedProblem?.line === line.number;
+                    const lineCollaborators = Object.values(collaborators).filter(c => c.line === line.number && c.userId !== currentUser.id);
                     
                     return (
                       <div
@@ -1674,6 +1869,22 @@ export default function AIEditorPage({
                           backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
                         }}
                       >
+                        {/* Remote Cursors */}
+                        {lineCollaborators.map(user => (
+                            <div key={user.userId} className="absolute left-0 top-0 bottom-0 pointer-events-none z-10">
+                                <div 
+                                    className="remote-cursor-caret animation-pulse" 
+                                    style={{ backgroundColor: user.color, left: `${(user.offset || 0) * 8}px` }} 
+                                />
+                                <div 
+                                    className="remote-cursor-flag shadow-sm"
+                                    style={{ backgroundColor: user.color, left: `${(user.offset || 0) * 8}px` }}
+                                >
+                                    {user.name}
+                                </div>
+                            </div>
+                        ))}
+
                         {/* Line number (subtle, on hover) */}
                         <span className="absolute left-[-40px] text-[10px] text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity select-none">
                           {line.number}
@@ -1718,11 +1929,49 @@ export default function AIEditorPage({
                             suppressContentEditableWarning
                             className={`outline-none min-w-[20px] inline-block ${line.hasProblem ? 'cursor-pointer' : ''} focus:bg-blue-500/10 focus:ring-1 focus:ring-blue-500/30 rounded px-1 -mx-1`}
                             onBlur={(e) => handleEditableBlur(line.number, e)}
+                            onInput={(e) => {
+                                if (socket) {
+                                    const docId = workflow?.id || workflow?._id || 'demo-doc';
+                                    socket.emit('send-changes', {
+                                        documentId: docId,
+                                        lineId: line.number,
+                                        content: e.currentTarget.innerText,
+                                        senderId: currentUser.id
+                                    });
+                                }
+                            }}
+                            onKeyUp={(e) => {
+                                if (socket) {
+                                    const sel = window.getSelection();
+                                    const offset = sel.focusOffset;
+                                    const docId = workflow?.id || workflow?._id || 'demo-doc';
+                                    socket.emit('cursor-move', {
+                                        documentId: docId,
+                                        userId: currentUser.id,
+                                        userName: currentUser.name,
+                                        color: currentUser.color,
+                                        line: line.number,
+                                        offset: offset
+                                    });
+                                }
+                            }}
+                            onClick={(e) => {
+                                if (socket) {
+                                    const sel = window.getSelection();
+                                    const offset = sel.focusOffset;
+                                    const docId = workflow?.id || workflow?._id || 'demo-doc';
+                                    socket.emit('cursor-move', {
+                                        documentId: docId,
+                                        userId: currentUser.id,
+                                        userName: currentUser.name,
+                                        color: currentUser.color,
+                                        line: line.number,
+                                        offset: offset
+                                    });
+                                }
+                            }}
                             onKeyDown={(e) => handleEditableKeyDown(line.number, e)}
                             onFocus={() => setIsEditing(true)}
-                            onClick={() => {
-                              if (line.problem) handleProblemClick(line.problem);
-                            }}
                           >
                             {line.content || '\u00A0'}
                           </span>
@@ -1744,7 +1993,7 @@ export default function AIEditorPage({
           </div>
 
           {/* Bottom Panel - Problems */}
-          {isBottomPanelOpen && (
+          {isBottomPanelOpen && !isFocusMode && (
             <div className="flex flex-col border-t border-border bg-card/95 relative" style={{ height: bottomPanelHeight }}>
               {/* Resize Handle */}
               <div 
@@ -1871,7 +2120,7 @@ export default function AIEditorPage({
 
         {/* Right Panel - AI Assistant with Solution View */}
         {!isRightPanelOpen && (
-             <div className="w-12 border-l border-border bg-background flex flex-col items-center py-4 gap-4 z-10 shrink-0">
+             <div className={`w-12 border-l border-border bg-background flex flex-col items-center py-4 gap-4 z-10 shrink-0 ${isFocusMode ? 'hidden' : ''}`}> 
                  <Button 
                     variant="ghost" 
                     size="icon" 
@@ -2123,6 +2372,62 @@ export default function AIEditorPage({
         )}
       </div>
     </div>
+
+    {/* Share Dialog */}
+    <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+                <div className="p-2 bg-blue-500/10 rounded-full">
+                    <Share2 className="w-4 h-4 text-blue-600" />
+                </div>
+                Share to Web
+            </DialogTitle>
+            <DialogDescription>
+                Publish and share this link with others to collaborate.
+            </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+                <div className="flex items-center gap-2">
+                    <Input 
+                        id="share-link" 
+                        value={shareUrl || "Generating link..."} 
+                        readOnly 
+                        className="font-mono text-xs h-9 bg-muted/30"
+                    />
+                    <Button size="sm" className="shrink-0 h-9" onClick={() => {
+                        navigator.clipboard.writeText(shareUrl);
+                        toast.success('Link copied!');
+                        setIsShareDialogOpen(false);
+                    }}>
+                        <Copy className="w-3.5 h-3.5 mr-2" />
+                        Copy
+                    </Button>
+                </div>
+                
+                <div className="rounded border border-border p-3 bg-muted/20">
+                    <div className="flex items-center justify-between">
+                         <div className="flex items-center gap-3">
+                            <div 
+                                className="w-8 h-8 rounded-full flex items-center justify-center text-xs text-white font-bold shadow-sm"
+                                style={{ backgroundColor: currentUser.color }}
+                            >
+                                {currentUser.name[0]}
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-sm font-medium">You ({currentUser.name})</span>
+                                <span className="text-[10px] text-muted-foreground">Session Owner</span>
+                            </div>
+                         </div>
+                         <div className="text-[10px] px-2 py-1 rounded bg-green-500/10 text-green-600 border border-green-500/20 font-medium flex items-center gap-1">
+                             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                             Online
+                         </div>
+                    </div>
+                </div>
+            </div>
+        </DialogContent>
+    </Dialog>
     </>
   );
 }
