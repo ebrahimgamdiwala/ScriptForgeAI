@@ -255,8 +255,62 @@ export default function AIEditorPage({
   const [isEditing, setIsEditing] = useState(false);
   const [showIssueHighlights, setShowIssueHighlights] = useState(true);
   
+  // Resizing Refs
+  const isDraggingBottom = useRef(false);
+  const isDraggingRight = useRef(false);
+
   // Autosave ref
   const autosaveTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (isDraggingBottom.current) {
+        // Calculate new height from bottom
+        const newHeight = window.innerHeight - e.clientY;
+        // Clamp height (min 100px, max 80vh)
+        if (newHeight > 100 && newHeight < window.innerHeight * 0.8) {
+          setBottomPanelHeight(newHeight);
+        }
+      }
+      if (isDraggingRight.current) {
+        // Calculate new width from right
+        const newWidth = window.innerWidth - e.clientX;
+        // Clamp width (min 200px, max 50vw)
+        if (newWidth > 250 && newWidth < window.innerWidth * 0.5) {
+          setRightPanelWidth(newWidth);
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      isDraggingBottom.current = false;
+      isDraggingRight.current = false;
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+
+  const handleDragBottomStart = (e) => {
+    e.preventDefault();
+    isDraggingBottom.current = true;
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  const handleDragRightStart = (e) => {
+    e.preventDefault();
+    isDraggingRight.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
 
   // Version Control State
   const [versions, setVersions] = useState([]);
@@ -781,9 +835,8 @@ export default function AIEditorPage({
     // Double check we have something to apply
     if (!fixToApply) return;
 
-    // Update the script lines to show the accepted change
-    setScriptLines(prevLines => {
-       const updatedLines = prevLines.map(line => {
+    // 1. Calculate the new lines array
+    const updatedLines = scriptLines.map(line => {
         if (line.number === problem.line) {
           return {
             ...line,
@@ -795,19 +848,15 @@ export default function AIEditorPage({
           };
         }
         return line;
-      });
-
-      // Update the master string content from these new lines
-      const newStringContent = updatedLines.map(l => l.content).join('\n');
-      setScriptContent(newStringContent);
-
-      // Sync with Knowledge Graph
-      syncGraphWithScript(newStringContent);
-
-      return updatedLines;
     });
 
-    // Mark problem as resolved
+    // 2. Update all states based on the calculated values
+    setScriptLines(updatedLines);
+
+    const newStringContent = updatedLines.map(l => l.content).join('\n');
+    setScriptContent(newStringContent);
+
+    // 3. Mark problem as resolved
     setResolvedProblems(prev => new Set([...prev, problem.id]));
 
     // Track accepted changes
@@ -847,28 +896,24 @@ export default function AIEditorPage({
     onApplyEdit?.(problem, 'accept');
     toast.success('Change accepted and applied to document');
 
+    // 4. Trigger side effects (Sync & Autosave) after state updates are scheduled
+    // Sync Graph immediately with the new content
+    syncGraphWithScript(newStringContent);
+
     // AUTO-SAVE VERSION: ensure the latest edits persist to history immediately
-    // Calculate content to save synchronously to avoid closure reference errors
-    const autoSaveUpdatedLines = scriptLines.map(line => {
-        if (line.number === problem.line) {
-          return { ...line, content: fixToApply };
-        }
-        return line;
-    });
-    const autoSaveContent = autoSaveUpdatedLines.map(l => l.content).join('\n');
     const autoSaveAcceptedChanges = [...acceptedChanges, newChangeRecord];
 
     setTimeout(() => {
-        if (autoSaveContent && workflow?.id) {
-             const wfId = workflow.id;
+        const wfId = workflow?._id || workflow?.id;
+        if (newStringContent && wfId) {
              fetch('/api/script-editor/versions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   workflowId: wfId,
-                  content: autoSaveContent,
+                  content: newStringContent,
                   message: `Auto-save: Accepted fix for "${problem.title}"`,
-                  stats: { totalLines: autoSaveContent.split('\n').length },
+                  stats: { totalLines: newStringContent.split('\n').length },
                   acceptedChanges: autoSaveAcceptedChanges,
                   rejectedChanges: rejectedChanges
                 })
@@ -944,46 +989,45 @@ export default function AIEditorPage({
 
   // Handle manual editing of script lines
   const handleLineEdit = (lineNumber, newContent) => {
-    setScriptLines(prev => {
-        const updated = prev.map(line => {
-          if (line.number === lineNumber) {
-            return { ...line, content: newContent, manuallyEdited: true };
-          }
-          return line;
-        });
-        
-        // Update master content
-        const newStringContent = updated.map(l => l.content).join('\n');
-        setScriptContent(newStringContent);
-        
-        // Trigger Autosave
-        if (autosaveTimeoutRef.current) {
-            clearTimeout(autosaveTimeoutRef.current);
-        }
-        
-        autosaveTimeoutRef.current = setTimeout(() => {
-           if (workflow?.id) {
-             const wfId = workflow.id; // Correct ID usage
-             fetch('/api/script-editor/versions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  workflowId: wfId,
-                  content: newStringContent,
-                  message: `Auto-save: Manual edit`,
-                  stats: { totalLines: newStringContent.split('\n').length },
-                  acceptedChanges: acceptedChanges, // Keep tracking history
-                  rejectedChanges: rejectedChanges
-                })
-             }).then(() => {
-                 fetchVersions(); 
-                 syncGraphWithScript(newStringContent);
-             });
-           }
-        }, 2000); // 2 second debounce
-
-        return updated;
+    // 1. Calculate new state based on current scriptLines
+    const updatedLines = scriptLines.map(line => {
+      if (line.number === lineNumber) {
+        return { ...line, content: newContent, manuallyEdited: true };
+      }
+      return line;
     });
+
+    const newStringContent = updatedLines.map(l => l.content).join('\n');
+
+    // 2. Queue state updates
+    setScriptLines(updatedLines);
+    setScriptContent(newStringContent);
+    
+    // 3. Handle side effects (Autosave)
+    if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current);
+    }
+    
+    autosaveTimeoutRef.current = setTimeout(() => {
+       const wfId = workflow?._id || workflow?.id;
+       if (wfId) {
+         fetch('/api/script-editor/versions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              workflowId: wfId,
+              content: newStringContent,
+              message: `Auto-save: Manual edit`,
+              stats: { totalLines: newStringContent.split('\n').length },
+              acceptedChanges: acceptedChanges, 
+              rejectedChanges: rejectedChanges
+            })
+         }).then(() => {
+             fetchVersions(); 
+             syncGraphWithScript(newStringContent);
+         });
+       }
+    }, 2000); 
   };
 
   // Handle contentEditable blur to save changes
@@ -1002,6 +1046,163 @@ export default function AIEditorPage({
     if (e.key === 'Escape') {
       e.target.blur();
     }
+  };
+
+  const handleFixAllIssues = async () => {
+      if (pendingProblems.length === 0) {
+          toast.success("No pending issues to fix!");
+          return;
+      }
+
+      setIsProcessing(true);
+      // Construct a consolidated instruction
+      let batchInstruction = `Please fix ALL of the following issues identified in the script. Ensure consistency across the entire text.\n\nISSUES TO FIX:\n`;
+      
+      pendingProblems.forEach((p, idx) => {
+          batchInstruction += `${idx + 1}. [Line ${p.line}] ${p.title}: ${p.message}\n`;
+      });
+
+      try {
+             // Use the Agent API for high-level rewriting
+             const response = await fetch('/api/script-editor/agent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    instruction: batchInstruction, 
+                    scriptContent: scriptContent 
+                })
+             });
+
+             if (!response.ok) throw new Error("Batch Fix Request failed");
+             const data = await response.json();
+
+             if (data.changes && data.changes.length > 0) {
+                 const newMessages = data.changes.map((change, idx) => {
+                    let matchLine = 1;
+                    const lines = scriptContent.split('\n');
+                    const foundIdx = lines.findIndex(l => l.includes(change.original_text.substring(0, 30)));
+                    if (foundIdx !== -1) matchLine = foundIdx + 1;
+
+                    return {
+                        id: `msg-agent-batch-${Date.now()}-${idx}`,
+                        role: 'assistant',
+                        problem: {
+                            id: `agent-batch-proposal-${Date.now()}-${idx}`,
+                            title: "Batch Fix",
+                            message: change.explanation || "Auto-fix for multiple issues",
+                            originalText: change.original_text,
+                            suggestedFix: change.new_text,
+                            line: matchLine,
+                            status: 'pending',
+                            resolved: false
+                        },
+                        timestamp: new Date()
+                    };
+                 });
+                 
+                 // Add the summary message with batch action
+                 const batchProblemPayload = newMessages.map(m => m.problem);
+                 const summaryMessage = {
+                     id: `msg-batch-all-${Date.now()}`,
+                     role: 'assistant',
+                     isBatchAction: true,
+                     resolveAllPending: true, // Flag to indicate this cleans up the issue list
+                     content: `I've analyzed all ${pendingProblems.length} issues and generated ${data.changes.length} consolidated fixes to address them consistently.`,
+                     batchProblems: batchProblemPayload,
+                     timestamp: new Date()
+                 };
+
+                 setChatMessages(prev => [...prev, ...newMessages, summaryMessage]);
+                 if (!isRightPanelOpen) setIsRightPanelOpen(true);
+                 
+             } else {
+                 toast.error("Could not generate batch fixes.");
+             }
+
+      } catch (err) {
+          console.error("Fix All Error", err);
+          toast.error("Failed to generate fixes");
+      } finally {
+          setIsProcessing(false);
+      }
+  };
+
+  const handleAcceptAll = (problems, resolveAllPending = false) => {
+    // 1. Calculate new lines applying all changes
+    const updatedLines = scriptLines.map(line => {
+       const matchingProblem = problems.find(p => p.line === line.number);
+       if (matchingProblem) {
+           return {
+               ...line,
+               content: matchingProblem.suggestedFix,
+               hasProblem: false,
+               problem: null,
+               pendingChange: null,
+               acceptedChange: true
+           };
+       }
+       return line;
+    });
+    
+    // 2. Queue State
+    setScriptLines(updatedLines);
+    const newStringContent = updatedLines.map(l => l.content).join('\n');
+    setScriptContent(newStringContent);
+    
+    // 3. Mark Resolved
+    const executedIds = new Set(problems.map(p => p.id));
+    setResolvedProblems(prev => new Set([...prev, ...executedIds]));
+    
+    // If this was a "Fix All" action, mark ALL originally pending problems as resolved too
+    // to clear the bottom panel
+    if (resolveAllPending) {
+        const allPendingIds = pendingProblems.map(p => p.id);
+        setResolvedProblems(prev => new Set([...prev, ...allPendingIds]));
+    }
+    
+    const newChanges = problems.map(p => ({
+        id: p.id,
+        original: p.originalText,
+        applied: p.suggestedFix,
+        timestamp: new Date()
+    }));
+    setAcceptedChanges(prev => [...prev, ...newChanges]);
+    
+    // 4. Update Chat UI to reflect resolution
+    setChatMessages(prev => prev.map(msg => {
+        if (msg.problem && executedIds.has(msg.problem.id)) {
+             return { ...msg, problem: { ...msg.problem, resolved: true, resolution: 'accepted' } };
+        }
+        if (msg.isBatchAction && msg.batchProblems && msg.batchProblems.some(p => executedIds.has(p.id))) {
+             return { ...msg, batchResolved: true };
+        }
+        return msg;
+    }));
+    
+    toast.success(`Applied ${problems.length} fixes & updated document.`);
+    
+    // 5. Side Effects
+    syncGraphWithScript(newStringContent);
+    
+    setTimeout(() => {
+        if (newStringContent && workflow?.id) {
+             const wfId = workflow.id;
+             fetch('/api/script-editor/versions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  workflowId: wfId,
+                  content: newStringContent,
+                  message: `Auto-save: Accepted ${problems.length} changes (Batch Fix)`,
+                  stats: { totalLines: newStringContent.split('\n').length },
+                  acceptedChanges: [...acceptedChanges, ...newChanges],
+                  rejectedChanges: rejectedChanges
+                })
+             }).then(() => {
+                 fetchVersions();
+             });
+        }
+    }, 100);
   };
 
   const handleSendMessage = async () => {
@@ -1037,17 +1238,78 @@ export default function AIEditorPage({
         }
       }
 
+      // --- NEW AGENT LOGIC (If no specific problem selected) ---
+      if (!selectedProblem) {
+          // If we have script content, treat this as a global Agent Request
+          if (scriptContent) {
+             const response = await fetch('/api/script-editor/agent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    instruction: currentInput, 
+                    scriptContent: scriptContent 
+                })
+             });
+
+             if (!response.ok) throw new Error("Agent Request failed");
+             const data = await response.json();
+
+             if (data.changes && data.changes.length > 0) {
+                 // Convert agent changes to "Problem" style cards for the chat UI
+                 const newMessages = data.changes.map((change, idx) => {
+                    // Try to find the line number for the original text
+                    let matchLine = 1;
+                    const lines = scriptContent.split('\n');
+                    const foundIdx = lines.findIndex(l => l.includes(change.original_text.substring(0, 30))); // Fuzzy match start
+                    if (foundIdx !== -1) matchLine = foundIdx + 1;
+
+                    return {
+                        id: `msg-agent-${Date.now()}-${idx}`,
+                        role: 'assistant',
+                        content: idx === 0 ? "I've drafted some changes based on your request. Review them below:" : "",
+                        problem: {
+                            id: `agent-proposal-${Date.now()}-${idx}`,
+                            title: "AI Proposal",
+                            message: change.explanation || "Suggested Edit",
+                            originalText: change.original_text,
+                            suggestedFix: change.new_text,
+                            line: matchLine,
+                            status: 'pending',
+                            resolved: false
+                        },
+                        timestamp: new Date()
+                    };
+                 });
+                 
+                 setChatMessages(prev => [...prev, ...newMessages]);
+
+                 // Add Batch Action if multiple
+                 if (data.changes.length > 1) {
+                     const batchProblemPayload = newMessages.map(m => m.problem);
+                     setChatMessages(prev => [...prev, {
+                         id: `msg-batch-${Date.now()}`,
+                         role: 'system',
+                         isBatchAction: true,
+                         content: `Generated ${data.changes.length} proposals.`,
+                         batchProblems: batchProblemPayload,
+                         timestamp: new Date()
+                     }]);
+                 }
+             } else {
+                 setChatMessages(prev => [...prev, {
+                    id: `msg-${Date.now()}`,
+                    role: 'assistant',
+                    content: "I analyzed the script but couldn't determine a specific change to make based on that instruction. Could you be more specific?",
+                    timestamp: new Date()
+                }]);
+             }
+             setIsProcessing(false);
+             return;
+          }
+      }
+
+      // --- EXISTING PROBLEM CORRECTION LOGIC ---
       if (!textToFix) {
-        // Fallback response if no context is selected
-        setTimeout(() => {
-            setChatMessages(prev => [...prev, {
-                id: `msg-${Date.now()}`,
-                role: 'assistant',
-                content: "Please select a problem from the list so I know which part of the script to correct.",
-                timestamp: new Date()
-            }]);
-            setIsProcessing(false);
-        }, 500);
         return;
       }
 
@@ -1483,7 +1745,12 @@ export default function AIEditorPage({
 
           {/* Bottom Panel - Problems */}
           {isBottomPanelOpen && (
-            <div className="border-t border-border bg-card/95" style={{ height: bottomPanelHeight }}>
+            <div className="flex flex-col border-t border-border bg-card/95 relative" style={{ height: bottomPanelHeight }}>
+              {/* Resize Handle */}
+              <div 
+                className="absolute top-[-4px] left-0 right-0 h-2 cursor-row-resize hover:bg-emerald-500/50 z-50 transition-colors opacity-0 hover:opacity-100"
+                onMouseDown={handleDragBottomStart}
+              />
               <div className="h-9 border-b border-border flex items-center justify-between px-2 bg-muted/30">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
                   <TabsList className="h-full bg-transparent gap-1 p-0">
@@ -1527,7 +1794,27 @@ export default function AIEditorPage({
 
               <div className="h-[calc(100%-36px)] overflow-y-auto ai-editor-scroll">
                 {activeTab === 'problems' ? (
-                  <div className="divide-y divide-border/50">
+                  <div className="relative flex flex-col min-h-full">
+                    {pendingProblems.length > 0 && (
+                        <div className="sticky top-0 z-10 bg-card/95 backdrop-blur p-2 flex items-center justify-between border-b border-border shadow-sm shrink-0">
+                             <div className="flex items-center gap-2 pl-2">
+                                <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                                <span className="text-xs font-semibold text-foreground">
+                                    {pendingProblems.length} Suggested Fixes
+                                </span>
+                             </div>
+                             <Button 
+                                size="sm" 
+                                onClick={handleFixAllIssues}
+                                disabled={isProcessing}
+                                className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 shadow-sm transition-all hover:scale-105"
+                             >
+                                {isProcessing ? <RefreshCw className="w-3 h-3 animate-spin"/> : <Zap className="w-3 h-3 fill-current"/>}
+                                Fix All
+                             </Button>
+                        </div>
+                    )}
+                    <div className="divide-y divide-border/50 flex-1">
                     {pendingProblems.length === 0 ? (
                       <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
                         <CheckCircle className="w-5 h-5 mr-2 text-emerald-500" />
@@ -1568,6 +1855,7 @@ export default function AIEditorPage({
                       })
                     )}
                   </div>
+                  </div>
                 ) : (
                   <div className="p-4 font-mono text-xs text-muted-foreground">
                     <p className="text-emerald-500">[AI Script Editor]</p>
@@ -1582,16 +1870,52 @@ export default function AIEditorPage({
         </div>
 
         {/* Right Panel - AI Assistant with Solution View */}
+        {!isRightPanelOpen && (
+             <div className="w-12 border-l border-border bg-background flex flex-col items-center py-4 gap-4 z-10 shrink-0">
+                 <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-10 w-10 rounded-full bg-muted/50 hover:bg-emerald-500/10 hover:text-emerald-500" 
+                    onClick={() => setIsRightPanelOpen(true)}
+                    title="Open AI Assistant"
+                 >
+                    <ChevronLeft className="w-5 h-5" />
+                 </Button>
+                 <div className="h-px w-6 bg-border" />
+                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" title="Chat History">
+                     <History className="w-4 h-4"/>
+                 </Button>
+                 <div className="flex-1" />
+                 <div 
+                    className="text-xs font-semibold text-muted-foreground tracking-widest uppercase opacity-50 select-none pb-4 whitespace-nowrap" 
+                    style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', transform: 'rotate(180deg)' }}
+                 >
+                    AI Assistant
+                 </div>
+             </div>
+        )}
+
         {isRightPanelOpen && (
-          <div className="border-l border-border bg-card/95 flex flex-col" style={{ width: rightPanelWidth }}>
+          <div className="border-l border-border bg-card/95 flex flex-col relative shrink-0" style={{ width: rightPanelWidth }}>
+             {/* Resize Handle */}
+            <div 
+                className="absolute left-[-4px] top-0 bottom-0 w-2 cursor-col-resize hover:bg-emerald-500/50 z-50 transition-colors opacity-0 hover:opacity-100 flex items-center justify-center group"
+                onMouseDown={handleDragRightStart}
+            />
+
             <div className="h-12 border-b border-border flex items-center justify-between px-4 bg-muted/30">
               <div className="flex items-center gap-2">
                 <Bot className="w-4 h-4 text-emerald-500" />
                 <span className="font-semibold text-sm">AI Assistant</span>
               </div>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setChatMessages([])}>
-                <RefreshCw className="w-3.5 h-3.5" />
-              </Button>
+              <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => setChatMessages([])} title="Clear Chat">
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => setIsRightPanelOpen(false)} title="Collapse Sidepanel">
+                    <PanelRightClose className="w-3.5 h-3.5" />
+                  </Button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto ai-editor-scroll">
@@ -1710,14 +2034,35 @@ export default function AIEditorPage({
                       </div>
                     )}
 
+                    {/* Batch Actions Summary */}
+                    {msg.isBatchAction && !msg.batchResolved && msg.batchProblems && (
+                      <div className="ml-10 rounded-lg border border-indigo-500/30 bg-indigo-500/5 overflow-hidden">
+                          <div className="px-3 py-2 border-b border-indigo-500/10 flex items-center justify-between">
+                              <span className="text-xs font-semibold text-indigo-500">Batch Actions</span>
+                              <Badge variant="outline" className="border-indigo-500/30 text-indigo-500 text-[9px]">{msg.batchProblems.length} proposals</Badge>
+                          </div>
+                          <div className="p-3">
+                              <Button 
+                                className="w-full text-xs gap-2 bg-indigo-500 hover:bg-indigo-600"
+                                onClick={() => handleAcceptAll(msg.batchProblems, msg.resolveAllPending)}
+                              >
+                                  <CheckCircle className="w-3.5 h-3.5" />
+                                  Accept All Changes
+                              </Button>
+                          </div>
+                      </div>
+                    )}
+
                     {/* Resolved state indicator */}
-                    {msg.problem?.resolved && (
+                    {(msg.problem?.resolved || msg.batchResolved) && (
                       <div className="ml-10 p-3 rounded-lg border border-border bg-muted/30">
                         <div className="flex items-center gap-2">
-                          {msg.problem.resolution === 'accepted' ? (
+                          {(msg.problem?.resolution === 'accepted' || msg.batchResolved) ? (
                             <>
                               <CheckCircle className="w-4 h-4 text-emerald-500" />
-                              <span className="text-xs text-emerald-500 font-medium">Change applied to document</span>
+                              <span className="text-xs text-emerald-500 font-medium">
+                                  {msg.batchResolved ? 'All changes accepted' : 'Change applied to document'}
+                              </span>
                             </>
                           ) : (
                             <>
