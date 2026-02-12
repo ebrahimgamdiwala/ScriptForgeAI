@@ -129,7 +129,7 @@ class StoryContextManager {
     mood: 'neutral',
     tension: 'low'
   };
-  
+
   private versionHistory: Map<string, StoryAnalysisResult[]> = new Map();
   private entityRegistry: Map<string, any> = new Map();
 
@@ -213,6 +213,11 @@ class StoryContextManager {
     return Array.from(this.entityRegistry.values());
   }
 
+  getVersionCount(chapterId: string): number {
+    const versions = this.versionHistory.get(chapterId);
+    return versions ? versions.length : 0;
+  }
+
   reset(): void {
     this.globalContext = {
       activeCharacters: [],
@@ -228,8 +233,81 @@ class StoryContextManager {
   }
 }
 
-// Singleton instance
-const contextManager = new StoryContextManager();
+// ============================================================
+// Workflow-scoped context store (prevents data leakage between users)
+// ============================================================
+interface ContextEntry {
+  manager: StoryContextManager;
+  lastAccessed: number;
+}
+
+const contextStore = new Map<string, ContextEntry>();
+const CONTEXT_TTL_MS = 60 * 60 * 1000; // 1 hour TTL
+const CONTEXT_CLEANUP_INTERVAL_MS = 10 * 60 * 1000; // Cleanup at most every 10 minutes
+let lastContextCleanupTime = 0;
+
+/**
+ * Cleanup expired context entries to prevent memory leaks.
+ * Called on-demand (serverless-safe, no setInterval).
+ */
+function cleanupExpiredContexts(): void {
+  const now = Date.now();
+
+  // Only run cleanup if enough time has passed since last cleanup
+  if (now - lastContextCleanupTime < CONTEXT_CLEANUP_INTERVAL_MS) return;
+  lastContextCleanupTime = now;
+
+  let cleanedCount = 0;
+
+  for (const [key, entry] of contextStore.entries()) {
+    if ((now - entry.lastAccessed) > CONTEXT_TTL_MS) {
+      contextStore.delete(key);
+      cleanedCount++;
+    }
+  }
+
+  if (cleanedCount > 0) {
+    console.log(`[StoryContext] Cleaned up ${cleanedCount} expired contexts`);
+  }
+}
+
+/**
+ * Get context manager for a specific workflowId (creates new if not exists)
+ */
+function getContextManager(workflowId?: string): StoryContextManager {
+  // Run on-demand cleanup (serverless-safe replacement for setInterval)
+  cleanupExpiredContexts();
+
+  const key = workflowId || 'default';
+
+  let entry = contextStore.get(key);
+  if (!entry) {
+    entry = {
+      manager: new StoryContextManager(),
+      lastAccessed: Date.now()
+    };
+    contextStore.set(key, entry);
+  } else {
+    entry.lastAccessed = Date.now();
+  }
+
+  return entry.manager;
+}
+
+/**
+ * Reset context for a specific workflow
+ */
+function resetContextForWorkflow(workflowId?: string): void {
+  const key = workflowId || 'default';
+  const entry = contextStore.get(key);
+  if (entry) {
+    entry.manager.reset();
+    entry.lastAccessed = Date.now();
+  }
+}
+
+// Legacy singleton for backward compatibility (deprecated - use getContextManager with workflowId)
+const contextManager = getContextManager('legacy_default');
 
 /**
  * Generate a unique ID for entities
@@ -246,11 +324,13 @@ function generateId(prefix: string, name: string): string {
 export async function analyzeManuscript(
   text: string,
   chapterNumber: number,
-  existingContext?: GlobalContext
+  existingContext?: GlobalContext,
+  workflowId?: string
 ): Promise<StoryAnalysisResult> {
   const model = getFlashModel();
-  const context = existingContext || contextManager.getGlobalContext();
-  
+  const ctxManager = getContextManager(workflowId);
+  const context = existingContext || ctxManager.getGlobalContext();
+
   const prompt = `You are a Story Intelligence Agent analyzing manuscript text. Extract all story elements with precision.
 
 CURRENT GLOBAL CONTEXT:
@@ -360,7 +440,7 @@ IMPORTANT:
 
   // Generate IDs for all entities
   const chapterId = `chapter_${chapterNumber}_${Date.now().toString(36)}`;
-  
+
   const characters: Character[] = (parsed.characters || []).map((c: any) => ({
     ...c,
     id: generateId('char', c.name)
@@ -409,8 +489,7 @@ IMPORTANT:
   }));
 
   // Get existing version count
-  const existingVersions = contextManager['versionHistory'].get(chapterId);
-  const version = existingVersions ? existingVersions.length + 1 : 1;
+  const version = ctxManager.getVersionCount(chapterId) + 1;
 
   const result: StoryAnalysisResult = {
     chapterId,
@@ -434,30 +513,31 @@ IMPORTANT:
   };
 
   // Update global context
-  contextManager.updateContext(result);
+  ctxManager.updateContext(result);
 
   return result;
 }
 
 /**
- * Get the current global context
+ * Get the current global context for a workflow
  */
-export function getGlobalContext(): GlobalContext {
-  return contextManager.getGlobalContext();
+export function getGlobalContext(workflowId?: string): GlobalContext {
+  return getContextManager(workflowId).getGlobalContext();
 }
 
 /**
- * Reset the context manager
+ * Reset the context manager for a workflow
  */
-export function resetContext(): void {
-  contextManager.reset();
+export function resetContext(workflowId?: string): void {
+  resetContextForWorkflow(workflowId);
 }
 
 /**
  * Get version differences for a chapter
  */
-export function getVersionDiff(chapterId: string) {
-  return contextManager.getVersionDiff(chapterId);
+export function getVersionDiff(chapterId: string, workflowId?: string) {
+  return getContextManager(workflowId).getVersionDiff(chapterId);
 }
 
-export { contextManager };
+// Legacy export for backward compatibility (deprecated)
+export { contextManager, getContextManager, resetContextForWorkflow };

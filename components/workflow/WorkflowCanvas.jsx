@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import ReactFlow, {
   MiniMap,
   Controls,
@@ -81,7 +80,6 @@ export default function WorkflowCanvas({
   onUpdateEdges,
   onRefresh
 }) {
-  const router = useRouter();
   const [nodes, setNodes, onNodesChange] = useNodesState(workflow?.nodes || []);
   const [edges, setEdges, onEdgesChange] = useEdgesState(workflow?.edges || []);
   const [selectedNode, setSelectedNode] = useState(null);
@@ -549,12 +547,11 @@ export default function WorkflowCanvas({
           ...agentData,
           status: 'idle',
           onNodeClick: handleNodeClick,
-          onRun: (agentType) => executeAgentById(`node-${Date.now()}`, agentType),
           workflowId: workflow?._id
         }
       };
 
-      // Re-assign onRun with the correct node id
+      // Assign onRun with the correct node id (must be after newNode is created)
       newNode.data.onRun = (agentType) => executeAgentById(newNode.id, agentType);
 
       setNodes((nds) => nds.concat(newNode));
@@ -908,7 +905,7 @@ export default function WorkflowCanvas({
         <div className="flex items-center gap-6">
           <Button
             variant="ghost"
-            onClick={() => router.push('/workflows/create')}
+            onClick={() => window.location.href = '/workflows/create'}
             className="text-muted-foreground hover:text-foreground"
           >
             <ChevronLeft className="w-4 h-4 mr-1" />
@@ -917,7 +914,7 @@ export default function WorkflowCanvas({
           <Separator orientation="vertical" className="h-6 bg-border" />
           <Button
             variant="ghost"
-            onClick={() => router.push('/dashboard')}
+            onClick={() => window.location.href = '/dashboard'}
             className="text-muted-foreground hover:text-foreground"
           >
             <Home className="w-4 h-4 mr-2" />
@@ -933,7 +930,7 @@ export default function WorkflowCanvas({
             className="border-border text-muted-foreground hover:text-foreground hover:bg-accent"
           >
             <Sparkles className="w-4 h-4 mr-2" />
-            AI Editor
+            AI Forger
           </Button>
           <Button
             onClick={handleExecute}

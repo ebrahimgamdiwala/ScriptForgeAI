@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import StaggeredMenu from "@/components/StaggeredMenu";
@@ -42,17 +42,12 @@ export default function Home() {
     return () => observer.disconnect();
   }, []);
 
-  // Force remount ModelViewer when returning to home page from another route
-  // Don't remount on initial load or tab switches
-  const prevPathnameRef = useRef(pathname);
-
+  // Force remount ModelViewer when returning to home page
   useEffect(() => {
-    // Only remount if we're navigating TO '/' FROM a different route
-    // Don't remount on initial load or tab switches
-    if (pathname === '/' && prevPathnameRef.current !== '/' && prevPathnameRef.current !== pathname) {
+    if (pathname === '/') {
+      // Use timestamp to force complete remount
       setModelKey(Date.now());
     }
-    prevPathnameRef.current = pathname;
   }, [pathname]);
 
   return (
