@@ -395,7 +395,7 @@ graph LR
 
 1️⃣ **Clone the repository**
 ```bash
-git clone https://github.com/jenithjain/ScriptForgeAI.git
+git clone https://github.com/ebrahimgamdiwala/ScriptForgeAI.git
 cd ScriptForgeAI
 ```
 
@@ -668,7 +668,7 @@ Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
 
 ## Bug Reports & Feature Requests
 
-Found a bug or have a feature idea? Please [open an issue](https://github.com/jenithjain/ScriptForgeAI/issues) with:
+Found a bug or have a feature idea? Please [open an issue](https://github.com/ebrahimgamdiwala/ScriptForgeAI/issues) with:
 - **Clear title** describing the issue
 - **Steps to reproduce** (for bugs)
 - **Expected vs actual behavior**
@@ -679,11 +679,11 @@ Found a bug or have a feature idea? Please [open an issue](https://github.com/je
 
 ## Project Stats
 
-![GitHub Stars](https://img.shields.io/github/stars/jenithjain/ScriptForgeAI?style=social)
-![GitHub Forks](https://img.shields.io/github/forks/jenithjain/ScriptForgeAI?style=social)
-![GitHub Issues](https://img.shields.io/github/issues/jenithjain/ScriptForgeAI)
-![GitHub Pull Requests](https://img.shields.io/github/issues-pr/jenithjain/ScriptForgeAI)
-![Last Commit](https://img.shields.io/github/last-commit/jenithjain/ScriptForgeAI)
+![GitHub Stars](https://img.shields.io/github/stars/ebrahimgamdiwala/ScriptForgeAI?style=social)
+![GitHub Forks](https://img.shields.io/github/forks/ebrahimgamdiwala/ScriptForgeAI?style=social)
+![GitHub Issues](https://img.shields.io/github/issues/ebrahimgamdiwala/ScriptForgeAI)
+![GitHub Pull Requests](https://img.shields.io/github/issues-pr/ebrahimgamdiwala/ScriptForgeAI)
+![Last Commit](https://img.shields.io/github/last-commit/ebrahimgamdiwala/ScriptForgeAI)
 
 ---
 
@@ -728,7 +728,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 **Made by the ScriptForge AI Team**
 
-[![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/jenithjain/ScriptForgeAI)
+[![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ebrahimgamdiwala/ScriptForgeAI)
 
 ---
 
